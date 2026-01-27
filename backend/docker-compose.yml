@@ -1,0 +1,88 @@
+# Docker Compose - Runs all databases & services locally
+# This file defines all the infrastructure you need for development
+
+version: '3.8'
+
+services:
+  # PostgreSQL - Main database for users, blogs, comments, likes
+  postgres:
+    image: postgres:15-alpine  # Lightweight PostgreSQL image
+    container_name: draftio-postgres
+    environment:
+      POSTGRES_USER: draftio          # Database username
+      POSTGRES_PASSWORD: draftio123   # Database password
+      POSTGRES_DB: draftio            # Database name
+    ports:
+      - "5432:5432"  # Access on localhost:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Persist data
+    networks:
+      - draftio-network
+
+  # MongoDB - For chat messages (scales better for messaging)
+  mongodb:
+    image: mongo:7-jammy
+    container_name: draftio-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: draftio
+      MONGO_INITDB_ROOT_PASSWORD: draftio123
+    ports:
+      - "27017:27017"  # Access on localhost:27017
+    volumes:
+      - mongodb_data:/data/db  # Persist data
+    networks:
+      - draftio-network
+
+  # Redis - For caching and fast data access
+  redis:
+    image: redis:7-alpine
+    container_name: draftio-redis
+    ports:
+      - "6379:6379"  # Access on localhost:6379
+    volumes:
+      - redis_data:/data
+    networks:
+      - draftio-network
+
+  # Zookeeper - Required by Kafka (manages Kafka cluster)
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: draftio-zookeeper
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes  # For local dev only
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/bitnami/zookeeper
+    networks:
+      - draftio-network
+
+  # Kafka - Event streaming platform (for microservices communication)
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: draftio-kafka
+    depends_on:
+      - zookeeper  # Kafka needs Zookeeper to run
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    ports:
+      - "9092:9092"  # Access on localhost:9092
+    volumes:
+      - kafka_data:/bitnami/kafka
+    networks:
+      - draftio-network
+
+# Named volumes - Docker will manage these storage areas
+volumes:
+  postgres_data:    # PostgreSQL data persists here
+  mongodb_data:     # MongoDB data persists here
+  redis_data:       # Redis data persists here
+  zookeeper_data:   # Zookeeper data persists here
+  kafka_data:       # Kafka data persists here
+
+# Network - All containers can talk to each other
+networks:
+  draftio-network:
+    driver: bridge
