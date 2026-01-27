@@ -1,0 +1,23 @@
+// Package.json for shared utilities
+// All shared code dependencies go here
+
+{
+  "name": "@draftio/shared",
+  "version": "1.0.0",
+  "description": "Shared utilities and types for Draft.IO microservices",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": ["microservices", "shared", "utilities"],
+  "author": "Prince Rathod",
+  "license": "MIT",
+  "dependencies": {
+    "kafkajs": "^2.2.4",
+    "chalk": "^4.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3"
+  }
+}
