@@ -35,7 +35,7 @@ export const authMiddleware = (
       return;
     }
 
-    const decoded = jwt.verify(token, jwtSecret) as {
+    const decoded = jwt.verify(token, jwtSecret, { algorithms: ['HS256'] }) as {
       user_id: string;
       email: string;
     };
