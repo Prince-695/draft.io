@@ -1,8 +1,6 @@
 # Docker Compose - Runs all databases & services locally
 # This file defines all the infrastructure you need for development
 
-version: '3.8'
-
 services:
   # PostgreSQL - Main database for users, blogs, comments, likes
   postgres:
@@ -46,7 +44,7 @@ services:
 
   # Zookeeper - Required by Kafka (manages Kafka cluster)
   zookeeper:
-    image: bitnami/zookeeper:latest
+    image: bitnami/zookeeper:3.9
     container_name: draftio-zookeeper
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes  # For local dev only
@@ -59,7 +57,7 @@ services:
 
   # Kafka - Event streaming platform (for microservices communication)
   kafka:
-    image: bitnami/kafka:latest
+    image: bitnami/kafka:3.6
     container_name: draftio-kafka
     depends_on:
       - zookeeper  # Kafka needs Zookeeper to run
