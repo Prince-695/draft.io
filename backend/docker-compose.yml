@@ -44,31 +44,33 @@ services:
 
   # Zookeeper - Required by Kafka (manages Kafka cluster)
   zookeeper:
-    image: bitnami/zookeeper:3.9
+    image: confluentinc/cp-zookeeper:7.5.0
     container_name: draftio-zookeeper
     environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes  # For local dev only
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
     volumes:
-      - zookeeper_data:/bitnami/zookeeper
+      - zookeeper_data:/var/lib/zookeeper/data
     networks:
       - draftio-network
 
   # Kafka - Event streaming platform (for microservices communication)
   kafka:
-    image: bitnami/kafka:3.6
+    image: confluentinc/cp-kafka:7.5.0
     container_name: draftio-kafka
     depends_on:
       - zookeeper  # Kafka needs Zookeeper to run
     environment:
-      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
-      - ALLOW_PLAINTEXT_LISTENER=yes
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     ports:
       - "9092:9092"  # Access on localhost:9092
     volumes:
-      - kafka_data:/bitnami/kafka
+      - kafka_data:/var/lib/kafka/data
     networks:
       - draftio-network
 
