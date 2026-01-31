@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth.middleware';
 import * as likeModel from '../models/like.model';
 import * as commentModel from '../models/comment.model';
 import * as bookmarkModel from '../models/bookmark.model';
+import { publishEvent, EventType } from '../../../shared/events';
 
 // Like endpoints
 export const likeBlog = async (req: AuthRequest, res: Response) => {
@@ -11,6 +12,17 @@ export const likeBlog = async (req: AuthRequest, res: Response) => {
     const userId = req.user!.user_id;
     
     const like = await likeModel.likeBlog(userId, blogId);
+    
+    // Publish Kafka event
+    try {
+      await publishEvent(EventType.BLOG_LIKED, {
+        blogId,
+        userId,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (kafkaError) {
+      console.error('Failed to publish blog.liked event:', kafkaError);
+    }
     
     res.json({
       success: true,
@@ -46,6 +58,20 @@ export const createComment = async (req: AuthRequest, res: Response) => {
     const userId = req.user!.user_id;
     
     const comment = await commentModel.createComment(blogId, userId, content, parentId);
+    
+    // Publish Kafka event
+    try {
+      await publishEvent(EventType.COMMENT_CREATED, {
+        commentId: comment.id,
+        blogId,
+        userId,
+        content,
+        parentId: parentId || null,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (kafkaError) {
+      console.error('Failed to publish comment.created event:', kafkaError);
+    }
     
     res.json({
       success: true,
