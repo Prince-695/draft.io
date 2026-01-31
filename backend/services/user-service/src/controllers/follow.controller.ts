@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import * as FollowModel from '../models/follow.model';
+import { publishEvent, EventType } from '../../../shared/events';
 
 export const followUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -22,12 +23,16 @@ export const followUser = async (req: AuthRequest, res: Response): Promise<void>
 
     const follow = await FollowModel.followUser(followerId, userId);
 
-    // TODO: Publish Kafka event - user.followed
-    // await kafkaProducer.sendEvent('user.followed', {
-    //   event_type: 'USER_FOLLOWED',
-    //   timestamp: new Date().toISOString(),
-    //   data: { follower_id: followerId, following_id: userId }
-    // });
+    // Publish Kafka event
+    try {
+      await publishEvent(EventType.USER_FOLLOWED, {
+        followerId,
+        followingId: userId,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (kafkaError) {
+      console.error('Failed to publish user.followed event:', kafkaError);
+    }
 
     res.json({
       success: true,
@@ -55,12 +60,16 @@ export const unfollowUser = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    // TODO: Publish Kafka event - user.unfollowed
-    // await kafkaProducer.sendEvent('user.unfollowed', {
-    //   event_type: 'USER_UNFOLLOWED',
-    //   timestamp: new Date().toISOString(),
-    //   data: { follower_id: followerId, following_id: userId }
-    // });
+    // Publish Kafka event
+    try {
+      await publishEvent(EventType.USER_UNFOLLOWED, {
+        followerId,
+        followingId: userId,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (kafkaError) {
+      console.error('Failed to publish user.unfollowed event:', kafkaError);
+    }
 
     res.json({
       success: true,
