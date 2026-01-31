@@ -5,9 +5,11 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
+import oauthRoutes from './routes/oauth.routes';
 import pool from './config/database';
 import redis from './config/redis';
 import { kafkaProducer } from '../../shared/events';
+import passport from './config/passport';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -50,6 +52,11 @@ app.use(express.json());
  */
 app.use(express.urlencoded({ extended: true }));
 
+/**
+ * Initialize Passport
+ */
+app.use(passport.initialize());
+
 // ============================================
 // ROUTES
 // ============================================
@@ -74,6 +81,12 @@ app.get('/health', (req: Request, res: Response) => {
  * Example: POST /auth/register, POST /auth/login
  */
 app.use('/auth', authRoutes);
+
+/**
+ * OAuth routes
+ * Google OAuth: GET /auth/google, GET /auth/google/callback
+ */
+app.use('/auth', oauthRoutes);
 
 /**
  * 404 Not Found
