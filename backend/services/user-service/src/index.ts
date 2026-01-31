@@ -8,7 +8,7 @@ import pool from './config/database';
 import redis from './config/redis';
 import profileRoutes from './routes/profile.routes';
 import followRoutes from './routes/follow.routes';
-import { kafkaProducer } from '../../shared/events';
+import { kafkaProducer } from '../../../shared/events';
 import { swaggerSpec } from './config/swagger';
 
 dotenv.config();

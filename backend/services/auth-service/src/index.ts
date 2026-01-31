@@ -9,7 +9,7 @@ import authRoutes from './routes/auth.routes';
 import oauthRoutes from './routes/oauth.routes';
 import pool from './config/database';
 import redis from './config/redis';
-import { kafkaProducer } from '../../shared/events';
+import { kafkaProducer } from '../../../shared/events';
 import passport from './config/passport';
 import { swaggerSpec } from './config/swagger';
 

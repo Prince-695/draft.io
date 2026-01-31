@@ -52,9 +52,9 @@ const startServer = async () => {
     await connectRedis();
     console.log('✅ Redis connected');
 
-    // Check Gemini API key
-    if (!process.env.GOOGLE_GEMINI_API_KEY) {
-      console.warn('⚠️  Warning: GOOGLE_GEMINI_API_KEY not set. AI features will not work.');
+    // Check OpenAI API key
+    if (!process.env.OPENAI_API_KEY) {
+      console.warn('⚠️  Warning: OPENAI_API_KEY not set. AI features will not work.');
     }
 
     app.listen(PORT, () => {

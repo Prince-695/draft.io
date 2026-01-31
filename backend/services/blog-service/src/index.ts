@@ -9,7 +9,7 @@ import blogRoutes from './routes/blog.routes';
 import tagRoutes from './routes/tag.routes';
 import fs from 'fs';
 import path from 'path';
-import { kafkaProducer } from '../../shared/events';
+import { kafkaProducer } from '../../../shared/events';
 import { swaggerSpec } from './config/swagger';
 
 dotenv.config();
