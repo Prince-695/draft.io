@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getGeminiModel, safetySettings, generationConfig } from '../config/gemini';
+import openai, { DEFAULT_MODEL, generationConfig } from '../config/openai';
 import {
   GrammarCheckRequest,
   ContentImprovementRequest,
@@ -40,15 +40,15 @@ export const checkGrammar = async (req: Request, res: Response) => {
     Text to check:
     ${content}`;
 
-    const model = getGeminiModel();
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      safetySettings,
-      generationConfig,
+    const completion = await openai.chat.completions.create({
+      model: DEFAULT_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: generationConfig.temperature,
+      max_tokens: generationConfig.max_tokens,
+      top_p: generationConfig.top_p,
     });
 
-    const response = await result.response;
-    const text = response.text();
+    const text = completion.choices[0]?.message?.content || '';
 
     // Try to parse JSON response
     try {
@@ -123,15 +123,15 @@ export const improveContent = async (req: Request, res: Response) => {
     Original text:
     ${content}`;
 
-    const model = getGeminiModel();
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      safetySettings,
-      generationConfig,
+    const completion = await openai.chat.completions.create({
+      model: DEFAULT_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: generationConfig.temperature,
+      max_tokens: generationConfig.max_tokens,
+      top_p: generationConfig.top_p,
     });
 
-    const response = await result.response;
-    const text = response.text();
+    const text = completion.choices[0]?.message?.content || '';
 
     return res.json({
       success: true,
