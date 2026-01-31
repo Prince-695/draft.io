@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import * as FollowModel from '../models/follow.model';
-import { publishEvent, EventType } from '../../../shared/events';
+import { publishEvent, EventType } from '../../../../shared/events';
 
 export const followUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {

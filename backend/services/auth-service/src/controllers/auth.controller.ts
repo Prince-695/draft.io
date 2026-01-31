@@ -12,7 +12,7 @@ import {
   deleteRefreshToken,
   generateRandomToken,
 } from '../utils/jwt.util';
-import { publishEvent, EventType } from '../../../shared/events';
+import { publishEvent, EventType } from '../../../../shared/events';
 
 /**
  * REGISTER - Create a new user account

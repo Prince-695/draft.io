@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import passport from '../config/passport';
-import { generateToken } from '../utils/jwt.util';
-import { publishEvent, EventType } from '../../../shared/events';
+import { generateAccessToken } from '../utils/jwt.util';
+import { publishEvent, EventType } from '../../../../shared/events';
 
 /**
  * Initiates Google OAuth login
@@ -43,11 +43,7 @@ export const googleCallback = (req: Request, res: Response, next: NextFunction) 
       }
 
       // Generate JWT token
-      const token = generateToken({
-        user_id: user.id,
-        email: user.email,
-        username: user.username,
-      });
+      const token = generateAccessToken(user.id, user.email);
 
       // Redirect to frontend with token
       // Frontend will extract token from URL and store it
