@@ -25,7 +25,7 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     req.user = {
-      userId: decoded.userId,
+      userId: decoded.user_id || decoded.userId,
       email: decoded.email,
       plan: decoded.plan || 'free',
     };
