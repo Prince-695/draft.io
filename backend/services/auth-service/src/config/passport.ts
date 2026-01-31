@@ -3,14 +3,15 @@ import { Strategy as GoogleStrategy, Profile, VerifyCallback } from 'passport-go
 import pool from './database';
 import { v4 as uuidv4 } from 'uuid';
 
-// Initialize Passport Google OAuth Strategy
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID || '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-      callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5001/auth/google/callback',
-    },
+// Initialize Passport Google OAuth Strategy only if credentials are provided
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5001/auth/google/callback',
+      },
     async (
       accessToken: string,
       refreshToken: string,
@@ -72,6 +73,9 @@ passport.use(
     }
   )
 );
+} else {
+  console.log('⚠️  Google OAuth not configured - skipping Google login setup');
+}
 
 // Serialize user to store in session (not used in JWT-based auth, but required by Passport)
 passport.serializeUser((user: any, done) => {
