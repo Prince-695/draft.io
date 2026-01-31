@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getGeminiModel, safetySettings, generationConfig } from '../config/gemini';
+import openai, { DEFAULT_MODEL, generationConfig } from '../config/openai';
 import {
   SEOSuggestionsRequest,
   SummarizationRequest,
@@ -46,15 +46,15 @@ export const generateSEO = async (req: Request, res: Response) => {
     Content:
     ${content.substring(0, 2000)}`;
 
-    const model = getGeminiModel();
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      safetySettings,
-      generationConfig,
+    const completion = await openai.chat.completions.create({
+      model: DEFAULT_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: generationConfig.temperature,
+      max_tokens: generationConfig.max_tokens,
+      top_p: generationConfig.top_p,
     });
 
-    const response = await result.response;
-    const text = response.text();
+    const text = completion.choices[0]?.message?.content || '';
 
     // Try to parse JSON response
     try {
@@ -109,15 +109,15 @@ export const summarizeContent = async (req: Request, res: Response) => {
     Content:
     ${content}`;
 
-    const model = getGeminiModel();
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      safetySettings,
-      generationConfig,
+    const completion = await openai.chat.completions.create({
+      model: DEFAULT_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: generationConfig.temperature,
+      max_tokens: 500,
+      top_p: generationConfig.top_p,
     });
 
-    const response = await result.response;
-    const text = response.text();
+    const text = completion.choices[0]?.message?.content || '';
 
     return res.json({
       success: true,
