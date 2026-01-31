@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
 import fs from 'fs';
 import path from 'path';
 import pool from './config/database';
@@ -8,6 +9,7 @@ import redis from './config/redis';
 import profileRoutes from './routes/profile.routes';
 import followRoutes from './routes/follow.routes';
 import { kafkaProducer } from '../../shared/events';
+import { swaggerSpec } from './config/swagger';
 
 dotenv.config();
 
@@ -28,6 +30,11 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', service: 'user-service' });
 });
+
+// API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'Draft.IO User API Docs',
+}));
 
 // Routes
 app.use('/users/profile', profileRoutes);

@@ -1,12 +1,14 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
 import pool from './config/database';
 import redis from './config/redis';
 import engagementRoutes from './routes/engagement.routes';
 import fs from 'fs';
 import path from 'path';
 import { kafkaProducer } from '../../shared/events';
+import { swaggerSpec } from './config/swagger';
 
 dotenv.config();
 
@@ -25,6 +27,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'Draft.IO Engagement API Docs',
+}));
 app.use('/engagement', engagementRoutes);
 
 // Health check

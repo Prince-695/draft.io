@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
 import pool from './config/database';
 import redis from './config/redis';
 import { connectMongoDB } from './config/mongodb';
@@ -9,6 +10,7 @@ import tagRoutes from './routes/tag.routes';
 import fs from 'fs';
 import path from 'path';
 import { kafkaProducer } from '../../shared/events';
+import { swaggerSpec } from './config/swagger';
 
 dotenv.config();
 
@@ -27,6 +29,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'Draft.IO Blog API Docs',
+}));
 app.use('/blogs', blogRoutes);
 app.use('/taxonomy', tagRoutes);
 
