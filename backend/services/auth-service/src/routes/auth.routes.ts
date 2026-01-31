@@ -11,60 +11,161 @@ import {
 
 const router = express.Router();
 
-/**
- * Route structure:
- * router.METHOD(path, middleware1, middleware2, ..., handler)
- * 
- * Middleware runs in order:
- * 1. Validation middleware (check if data is valid)
- * 2. Auth middleware (check if user is logged in) - only for protected routes
- * 3. Controller (handle the request)
- */
-
 // Public routes (no authentication required)
 
 /**
- * POST /auth/register
- * Register a new user
- * Body: { email, username, password, full_name? }
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RegisterRequest'
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Validation error or user already exists
+ *       500:
+ *         description: Server error
  */
 router.post('/register', validateRegister, authController.register);
 
 /**
- * POST /auth/login
- * Login with email and password
- * Body: { email, password }
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Login with email and password
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoginRequest'
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       401:
+ *         description: Invalid credentials
+ *       500:
+ *         description: Server error
  */
 router.post('/login', validateLogin, authController.login);
 
 /**
- * POST /auth/refresh
- * Get new access token using refresh token
- * Body: { refresh_token }
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Refresh access token using refresh token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refresh_token
+ *             properties:
+ *               refresh_token:
+ *                 type: string
+ *                 description: JWT refresh token
+ *     responses:
+ *       200:
+ *         description: Token refreshed successfully
+ *       401:
+ *         description: Invalid or expired refresh token
+ *       500:
+ *         description: Server error
  */
 router.post('/refresh', validateRefreshToken, authController.refreshToken);
 
 /**
- * GET /auth/verify-email/:token
- * Verify user's email address
- * Params: { token }
+ * @swagger
+ * /auth/verify-email/{token}:
+ *   get:
+ *     summary: Verify user email address
+ *     tags: [Authentication]
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Email verification token
+ *     responses:
+ *       200:
+ *         description: Email verified successfully
+ *       400:
+ *         description: Invalid or expired token
  */
 router.get('/verify-email/:token', authController.verifyEmail);
 
 // Protected routes (authentication required)
 
 /**
- * GET /auth/me
- * Get current logged-in user's information
- * Headers: Authorization: Bearer <access_token>
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Get current logged-in user's information
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User information retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
  */
 router.get('/me', authMiddleware, authController.getMe);
 
 /**
- * POST /auth/logout
- * Logout and revoke refresh token
- * Headers: Authorization: Bearer <access_token>
- * Body: { user_id }
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Logout and revoke refresh token
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               user_id:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *       401:
+ *         description: Unauthorized
  */
 router.post('/logout', authMiddleware, authController.logout);
 

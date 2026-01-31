@@ -4,12 +4,14 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
 import authRoutes from './routes/auth.routes';
 import oauthRoutes from './routes/oauth.routes';
 import pool from './config/database';
 import redis from './config/redis';
 import { kafkaProducer } from '../../shared/events';
 import passport from './config/passport';
+import { swaggerSpec } from './config/swagger';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -66,6 +68,29 @@ app.use(passport.initialize());
  * GET /health
  * Returns: { status: "ok", service: "auth-service" }
  * Used by monitoring tools to check if service is running
+ * 
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Service is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *                 service:
+ *                   type: string
+ *                   example: auth-service
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
  */
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({
@@ -74,6 +99,14 @@ app.get('/health', (req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+/**
+ * Swagger API Documentation
+ */
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Draft.IO Auth API Docs',
+}));
 
 /**
  * Auth routes
