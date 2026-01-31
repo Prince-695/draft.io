@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getGeminiModel, safetySettings, generationConfig } from '../config/gemini';
+import openai, { DEFAULT_MODEL, generationConfig } from '../config/openai';
 import {
   ContentGenerationRequest,
   TitleSuggestionsRequest,
@@ -29,15 +29,15 @@ export const generateContent = async (req: Request, res: Response) => {
     Make it engaging, informative, and well-structured with proper paragraphs.
     Do not include a title, just the main content.`;
 
-    const model = getGeminiModel();
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      safetySettings,
-      generationConfig,
+    const completion = await openai.chat.completions.create({
+      model: DEFAULT_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: generationConfig.temperature,
+      max_tokens: generationConfig.max_tokens,
+      top_p: generationConfig.top_p,
     });
 
-    const response = await result.response;
-    const text = response.text();
+    const text = completion.choices[0]?.message?.content || '';
 
     return res.json({
       success: true,
@@ -75,15 +75,15 @@ export const generateTitles = async (req: Request, res: Response) => {
     Content:
     ${content.substring(0, 1000)}`;
 
-    const model = getGeminiModel();
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      safetySettings,
-      generationConfig,
+    const completion = await openai.chat.completions.create({
+      model: DEFAULT_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: generationConfig.temperature,
+      max_tokens: 500,
+      top_p: generationConfig.top_p,
     });
 
-    const response = await result.response;
-    const text = response.text();
+    const text = completion.choices[0]?.message?.content || '';
     const titles = text
       .split('\n')
       .filter((line) => line.trim().length > 0)
@@ -125,15 +125,15 @@ export const generateOutline = async (req: Request, res: Response) => {
     
     Format the outline in a clear, hierarchical structure.`;
 
-    const model = getGeminiModel();
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      safetySettings,
-      generationConfig,
+    const completion = await openai.chat.completions.create({
+      model: DEFAULT_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: generationConfig.temperature,
+      max_tokens: generationConfig.max_tokens,
+      top_p: generationConfig.top_p,
     });
 
-    const response = await result.response;
-    const text = response.text();
+    const text = completion.choices[0]?.message?.content || '';
 
     return res.json({
       success: true,
