@@ -7,6 +7,7 @@ import * as analyticsModel from '../models/analytics.model';
 import { generateSlug, generateUniqueSlug } from '../utils/slug.util';
 import pool from '../config/database';
 import { getDB } from '../config/mongodb';
+import { publishEvent, EventType } from '../../../shared/events';
 
 // Create new blog
 export const createBlog = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -51,6 +52,20 @@ export const createBlog = async (req: AuthRequest, res: Response): Promise<void>
     // Add categories if provided
     if (categories && categories.length > 0) {
       await tagModel.addCategoriesToBlog(blog.id, categories);
+    }
+
+    // Publish event if blog is created as published
+    if (blog.status === 'published') {
+      try {
+        await publishEvent(EventType.BLOG_PUBLISHED, {
+          blogId: blog.id,
+          authorId: blog.author_id,
+          title: blog.title,
+          slug: blog.slug,
+        });
+      } catch (kafkaError) {
+        console.error('Failed to publish blog.published event:', kafkaError);
+      }
     }
 
     res.status(201).json({
@@ -164,6 +179,20 @@ export const updateBlog = async (req: AuthRequest, res: Response): Promise<void>
       await tagModel.addCategoriesToBlog(blog.id, categories);
     }
 
+    // Publish event if blog is published
+    if (blog.status === 'published') {
+      try {
+        await publishEvent(EventType.BLOG_UPDATED, {
+          blogId: blog.id,
+          authorId: blog.author_id,
+          title: blog.title,
+          slug: blog.slug,
+        });
+      } catch (kafkaError) {
+        console.error('Failed to publish blog.updated event:', kafkaError);
+      }
+    }
+
     res.json({
       success: true,
       message: 'Blog updated successfully',
@@ -194,7 +223,17 @@ export const publishBlog = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    // TODO: Publish Kafka event "blog.published"
+    // Publish Kafka event
+    try {
+      await publishEvent(EventType.BLOG_PUBLISHED, {
+        blogId: blog.id,
+        authorId: blog.author_id,
+        title: blog.title,
+        slug: blog.slug,
+      });
+    } catch (kafkaError) {
+      console.error('Failed to publish blog.published event:', kafkaError);
+    }
 
     res.json({
       success: true,
@@ -246,6 +285,9 @@ export const deleteBlog = async (req: AuthRequest, res: Response): Promise<void>
     const { blogId } = req.params;
     const authorId = req.user!.user_id;
 
+    // Get blog info before deletion for event
+    const blogData = await blogModel.getBlogById(blogId);
+    
     const success = await blogModel.deleteBlog(blogId, authorId);
 
     if (!success) {
@@ -254,6 +296,20 @@ export const deleteBlog = async (req: AuthRequest, res: Response): Promise<void>
         error: 'Blog not found or unauthorized'
       });
       return;
+    }
+
+    // Publish event if blog was published
+    if (blogData && blogData.blog.status === 'published') {
+      try {
+        await publishEvent(EventType.BLOG_DELETED, {
+          blogId: blogData.blog.id,
+          authorId: blogData.blog.author_id,
+          title: blogData.blog.title,
+          slug: blogData.blog.slug,
+        });
+      } catch (kafkaError) {
+        console.error('Failed to publish blog.deleted event:', kafkaError);
+      }
     }
 
     res.json({
