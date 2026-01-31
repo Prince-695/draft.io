@@ -12,6 +12,7 @@ import {
   deleteRefreshToken,
   generateRandomToken,
 } from '../utils/jwt.util';
+import { publishEvent, EventType } from '../../../shared/events';
 
 /**
  * REGISTER - Create a new user account
@@ -68,12 +69,18 @@ export const register = async (req: Request, res: Response) => {
     // 7. Store refresh token in Redis
     await storeRefreshToken(user.id, refreshToken);
 
-    // 8. TODO: Publish "user.registered" event to Kafka
-    // await kafkaProducer.sendEvent('user.registered', {
-    //   event_type: 'user.registered',
-    //   timestamp: new Date(),
-    //   data: { user_id: user.id, email: user.email, username: user.username }
-    // });
+    // 8. Publish "user.registered" event to Kafka
+    try {
+      await publishEvent(EventType.USER_REGISTERED, {
+        userId: user.id,
+        email: user.email,
+        username: user.username,
+        fullName: user.full_name,
+      });
+    } catch (kafkaError) {
+      console.error('Failed to publish user.registered event:', kafkaError);
+      // Don't fail registration if Kafka is down
+    }
 
     // 9. Return success response
     return res.status(201).json({

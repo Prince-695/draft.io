@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import pool from './config/database';
 import redis from './config/redis';
+import { kafkaProducer } from '../../shared/events';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -132,6 +133,14 @@ const startServer = async () => {
     await redis.ping();
     console.log('✅ Redis connected');
     
+    // Connect Kafka Producer
+    try {
+      await kafkaProducer.connect();
+    } catch (kafkaError) {
+      console.warn('⚠️  Kafka Producer failed to connect:', kafkaError);
+      console.warn('⚠️  Service will continue without event publishing');
+    }
+    
     // Start listening for requests
     app.listen(PORT, () => {
       console.log('🚀 ========================================');
@@ -151,6 +160,7 @@ process.on('SIGTERM', async () => {
   console.log('⚠️  SIGTERM received, shutting down gracefully...');
   await pool.end();
   await redis.quit();
+  await kafkaProducer.disconnect();
   process.exit(0);
 });
 
