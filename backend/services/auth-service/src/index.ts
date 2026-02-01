@@ -4,9 +4,14 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
 import authRoutes from './routes/auth.routes';
+import oauthRoutes from './routes/oauth.routes';
 import pool from './config/database';
 import redis from './config/redis';
+import { kafkaProducer } from '../../../shared/events';
+import passport from './config/passport';
+import { swaggerSpec } from './config/swagger';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -49,6 +54,11 @@ app.use(express.json());
  */
 app.use(express.urlencoded({ extended: true }));
 
+/**
+ * Initialize Passport
+ */
+app.use(passport.initialize());
+
 // ============================================
 // ROUTES
 // ============================================
@@ -58,6 +68,29 @@ app.use(express.urlencoded({ extended: true }));
  * GET /health
  * Returns: { status: "ok", service: "auth-service" }
  * Used by monitoring tools to check if service is running
+ * 
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Service is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *                 service:
+ *                   type: string
+ *                   example: auth-service
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
  */
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({
@@ -68,11 +101,25 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 /**
+ * Swagger API Documentation
+ */
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Draft.IO Auth API Docs',
+}));
+
+/**
  * Auth routes
  * All routes prefixed with /auth
  * Example: POST /auth/register, POST /auth/login
  */
 app.use('/auth', authRoutes);
+
+/**
+ * OAuth routes
+ * Google OAuth: GET /auth/google, GET /auth/google/callback
+ */
+app.use('/auth', oauthRoutes);
 
 /**
  * 404 Not Found
@@ -132,6 +179,14 @@ const startServer = async () => {
     await redis.ping();
     console.log('✅ Redis connected');
     
+    // Connect Kafka Producer
+    try {
+      await kafkaProducer.connect();
+    } catch (kafkaError) {
+      console.warn('⚠️  Kafka Producer failed to connect:', kafkaError);
+      console.warn('⚠️  Service will continue without event publishing');
+    }
+    
     // Start listening for requests
     app.listen(PORT, () => {
       console.log('🚀 ========================================');
@@ -151,6 +206,7 @@ process.on('SIGTERM', async () => {
   console.log('⚠️  SIGTERM received, shutting down gracefully...');
   await pool.end();
   await redis.quit();
+  await kafkaProducer.disconnect();
   process.exit(0);
 });
 

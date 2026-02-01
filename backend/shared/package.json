@@ -1,6 +1,3 @@
-// Package.json for shared utilities
-// All shared code dependencies go here
-
 {
   "name": "@draftio/shared",
   "version": "1.0.0",
@@ -13,11 +10,13 @@
   "author": "Prince Rathod",
   "license": "MIT",
   "dependencies": {
+    "chalk": "^4.1.2",
     "kafkajs": "^2.2.4",
-    "chalk": "^4.1.2"
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "@types/uuid": "^11.0.0",
     "typescript": "^5.3.3"
   }
 }
