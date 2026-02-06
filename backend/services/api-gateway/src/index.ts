@@ -52,7 +52,9 @@ app.get('/status', async (req: Request, res: Response) => {
     blog: process.env.BLOG_SERVICE_URL,
     engagement: process.env.ENGAGEMENT_SERVICE_URL,
     ai: process.env.AI_SERVICE_URL,
-    notification: process.env.NOTIFICATION_SERVICE_URL
+    notification: process.env.NOTIFICATION_SERVICE_URL,
+    chat: process.env.CHAT_SERVICE_URL,
+    recommendation: process.env.RECOMMENDATION_SERVICE_URL
   };
 
   res.json({
@@ -160,8 +162,42 @@ app.use('/api/notifications', createProxyMiddleware({
   }
 }));
 
+// Chat Service - Real-time messaging
+app.use('/api/chat', createProxyMiddleware({
+  target: process.env.CHAT_SERVICE_URL || 'http://localhost:5007',
+  changeOrigin: true,
+  pathRewrite: {
+    '^/api/chat': ''
+  },
+  onError: (err, req, res) => {
+    console.error('Chat Service Proxy Error:', err.message);
+    (res as Response).status(503).json({
+      success: false,
+      error: 'Chat service unavailable'
+    });
+  }
+}));
+
+// Recommendation Service - Personalized blog recommendations
+app.use('/api/recommendations', createProxyMiddleware({
+  target: process.env.RECOMMENDATION_SERVICE_URL || 'http://localhost:5008',
+  changeOrigin: true,
+  pathRewrite: {
+    '^/api/recommendations': '/api/recommendations'
+  },
+  onError: (err, req, res) => {
+    console.error('Recommendation Service Proxy Error:', err.message);
+    (res as Response).status(503).json({
+      success: false,
+      error: 'Recommendation service unavailable'
+    });
+  }
+}));
+
 // 404 Handler
-app.use('*', (req: Request, res: Response) => {
+app.use('*', (`   - Chat: ${process.env.CHAT_SERVICE_URL}`);
+  console.log(`   - Recommendation: ${process.env.RECOMMENDATION_SERVICE_URL}`);
+  console.log(req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     error: 'Endpoint not found',
