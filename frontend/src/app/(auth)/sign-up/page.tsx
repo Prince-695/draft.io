@@ -24,7 +24,7 @@ import { getErrorMessage } from '@/utils/helpers';
 export default function SignUpPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const { mutate: register: registerUser, isPending } = useRegister();
+  const { mutate: signUp, isPending } = useRegister();
 
   const {
     register,
