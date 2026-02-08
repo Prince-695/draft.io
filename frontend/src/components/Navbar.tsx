@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { NotificationDropdown } from '@/components/NotificationDropdown';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { useAuthStore } from '@/stores';
 import { ROUTES } from '@/utils/constants';
 
@@ -52,6 +53,11 @@ export function Navbar() {
               placeholder="Search..."
               className="hidden md:block px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
             />
+
+            {/* Theme Switcher */}
+            <div className="hidden md:block">
+              <ThemeSwitcher />
+            </div>
 
             {/* Notifications */}
             <NotificationDropdown />
