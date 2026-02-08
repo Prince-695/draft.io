@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Editor } from '@/components/Editor';
+import { AIAssistant } from '@/components/AIAssistant';
 import { ROUTES } from '@/utils/constants';
 
 export default function WritePage() {
@@ -13,6 +14,7 @@ export default function WritePage() {
   const [tagInput, setTagInput] = useState('');
   const [coverImage, setCoverImage] = useState('');
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
+  const [aiLoading, setAiLoading] = useState(false);
 
   const handleSave = async () => {
     try {
@@ -38,6 +40,20 @@ export default function WritePage() {
 
   const removeTag = (tag: string) => {
     setTags(tags.filter(t => t !== tag));
+  };
+
+  const handleAIGenerate = async (prompt: string, type: 'generate' | 'improve' | 'grammar' | 'seo') => {
+    setAiLoading(true);
+    try {
+      // TODO: Call AI Service API
+      console.log('AI Action:', { type, prompt });
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } catch (error) {
+      console.error('AI generation failed:', error);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   return (
@@ -150,6 +166,9 @@ export default function WritePage() {
           placeholder="Start writing your amazing blog..."
         />
       </div>
+
+      {/* AI Assistant */}
+      <AIAssistant onGenerate={handleAIGenerate} isLoading={aiLoading} />
     </div>
   );
 }
