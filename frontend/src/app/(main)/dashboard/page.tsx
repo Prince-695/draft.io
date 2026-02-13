@@ -10,35 +10,56 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, MessageCircle, Eye, PenSquare, User } from 'lucide-react';
+import { Heart, MessageCircle, Eye, PenSquare, User, UserPlus, UserCheck } from 'lucide-react';
+import { useBlogs, useTrendingBlogs } from '@/hooks/useBlog';
+import { useFollowUser, useUnfollowUser } from '@/hooks/useUser';
 
 const Dashboard = () => {
   const router = useRouter();
   const { user } = useAuthStore();
   const [filter, setFilter] = useState<'all' | 'following' | 'trending'>('all');
   const [page, setPage] = useState(1);
+  const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
 
-  // TODO: Fetch blogs from API
-  const blogs = [
-    {
-      id: '1',
-      title: 'Getting Started with Next.js 14',
-      slug: 'getting-started-nextjs-14',
-      excerpt: 'Learn how to build modern web applications with the latest Next.js features...',
-      content: '<p>Sample content</p>',
-      cover_image: '',
-      tags: ['nextjs', 'react', 'web development'],
-      author: {
-        username: 'johndoe',
-        full_name: 'John Doe',
-        avatar_url: '',
-      },
-      views_count: 1234,
-      likes_count: 56,
-      comments_count: 12,
-      created_at: new Date().toISOString(),
-    },
-  ];
+  // Fetch blogs based on filter
+  const { data: allBlogsData, isLoading: loadingAllBlogs } = useBlogs(page, 10);
+  const { data: trendingData, isLoading: loadingTrending } = useTrendingBlogs();
+
+  // Follow/unfollow mutations
+  const followMutation = useFollowUser();
+  const unfollowMutation = useUnfollowUser();
+
+  // Get blogs based on current filter
+  const getBlogs = () => {
+    if (filter === 'trending') {
+      return trendingData?.data || [];
+    }
+    if (filter === 'following') {
+      // Filter blogs by followed users
+      return allBlogsData?.data?.blogs?.filter(blog => 
+        blog.author?.id && followingUsers.has(blog.author.id)
+      ) || [];
+    }
+    return allBlogsData?.data?.blogs || [];
+  };
+
+  const blogs = getBlogs();
+  const isLoading = filter === 'trending' ? loadingTrending : loadingAllBlogs;
+
+  const handleFollow = async (userId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (followingUsers.has(userId)) {
+      await unfollowMutation.mutateAsync(userId);
+      setFollowingUsers(prev => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
+    } else {
+      await followMutation.mutateAsync(userId);
+      setFollowingUsers(prev => new Set(prev).add(userId));
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -81,12 +102,23 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Feed */}
           <div className="lg:col-span-2 space-y-6">
-            {blogs.length === 0 ? (
+            {isLoading ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading blogs...</p>
+                </CardContent>
+              </Card>
+            ) : blogs.length === 0 ? (
               <Card>
                 <CardContent className="p-12 text-center">
                   <div className="text-6xl mb-4">📝</div>
                   <CardTitle className="text-xl mb-2">No posts yet</CardTitle>
-                  <CardDescription className="mb-4">Start following people to see their content</CardDescription>
+                  <CardDescription className="mb-4">
+                    {filter === 'following' 
+                      ? 'Start following people to see their content'
+                      : 'Be the first to write a blog!'}
+                  </CardDescription>
                   <Button onClick={() => router.push(ROUTES.WRITE)}>
                     <PenSquare className="w-4 h-4 mr-2" />
                     Write Your First Blog
@@ -102,17 +134,33 @@ const Dashboard = () => {
                 >
                   <CardContent className="p-6">
                     {/* Author */}
-                    <div className="flex items-center gap-3 mb-4">
-                      <Avatar>
-                        <AvatarImage src={blog.author.avatar_url} alt={blog.author.full_name} />
-                        <AvatarFallback>{blog.author.username.charAt(0).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">{blog.author.full_name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {formatDate(blog.created_at)} · {calculateReadingTime(blog.content)} min read
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={blog.author?.avatar_url} alt={blog.author?.full_name} />
+                          <AvatarFallback>{blog.author?.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">{blog.author?.full_name || blog.author?.username}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {formatDate(blog.created_at)} · {calculateReadingTime(blog.content || '')} min read
+                          </div>
                         </div>
                       </div>
+                      {blog.author?.id && blog.author.id !== user?.id && (
+                        <Button
+                          size="sm"
+                          variant={followingUsers.has(blog.author.id) ? "outline" : "default"}
+                          onClick={(e) => handleFollow(blog.author.id, e)}
+                          disabled={followMutation.isPending || unfollowMutation.isPending}
+                        >
+                          {followingUsers.has(blog.author.id) ? (
+                            <><UserCheck className="w-4 h-4 mr-1" /> Following</>
+                          ) : (
+                            <><UserPlus className="w-4 h-4 mr-1" /> Follow</>
+                          )}
+                        </Button>
+                      )}
                     </div>
 
                     {/* Content */}
@@ -124,24 +172,26 @@ const Dashboard = () => {
                     </div>
 
                     {/* Tags */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {blog.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="secondary">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
+                    {blog.tags && blog.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {blog.tags.slice(0, 3).map((tag) => (
+                          <Badge key={tag} variant="secondary">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Stats */}
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <Heart className="w-4 h-4" /> {blog.likes_count}
+                        <Heart className="w-4 h-4" /> {blog.likes_count || 0}
                       </span>
                       <span className="flex items-center gap-1">
-                        <MessageCircle className="w-4 h-4" /> {blog.comments_count}
+                        <MessageCircle className="w-4 h-4" /> {blog.comments_count || 0}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Eye className="w-4 h-4" /> {blog.views_count}
+                        <Eye className="w-4 h-4" /> {blog.views_count || 0}
                       </span>
                     </div>
                   </CardContent>
@@ -150,13 +200,14 @@ const Dashboard = () => {
             )}
 
             {/* Load More */}
-            {blogs.length > 0 && (
+            {blogs.length > 0 && filter === 'all' && !isLoading && (
               <div className="text-center py-8">
                 <Button
                   variant="outline"
                   onClick={() => setPage(page + 1)}
+                  disabled={loadingAllBlogs}
                 >
-                  Load More
+                  {loadingAllBlogs ? 'Loading...' : 'Load More'}
                 </Button>
               </div>
             )}
