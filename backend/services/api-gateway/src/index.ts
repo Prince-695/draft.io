@@ -28,8 +28,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Only parse JSON for non-proxied routes
+app.use('/health', express.json());
+app.use('/status', express.json());
 
 // Apply rate limiting to all routes
 app.use(rateLimiter);
@@ -195,9 +196,7 @@ app.use('/api/recommendations', createProxyMiddleware({
 }));
 
 // 404 Handler
-app.use('*', (`   - Chat: ${process.env.CHAT_SERVICE_URL}`);
-  console.log(`   - Recommendation: ${process.env.RECOMMENDATION_SERVICE_URL}`);
-  console.log(req: Request, res: Response) => {
+app.use('*', (req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     error: 'Endpoint not found',

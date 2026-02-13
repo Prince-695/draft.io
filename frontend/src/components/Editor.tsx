@@ -15,6 +15,7 @@ interface EditorProps {
 
 export function Editor({ content, onChange, placeholder = 'Start writing...' }: EditorProps) {
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Placeholder.configure({

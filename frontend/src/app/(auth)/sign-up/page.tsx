@@ -37,7 +37,7 @@ export default function SignUpPage() {
   const onSubmit = (data: SignUpFormData) => {
     setError(null);
     const { confirmPassword, ...registerData } = data;
-    registerUser(registerData, {
+    signUp(registerData, {
       onSuccess: () => {
         router.push(ROUTES.QUESTIONNAIRE);
       },
