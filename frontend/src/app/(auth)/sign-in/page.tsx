@@ -52,7 +52,7 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 dark:bg-gray-900">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
@@ -65,7 +65,7 @@ export default function SignInPage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {error && (
-              <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+              <div className="rounded-md bg-destructive/15 border border-destructive/30 p-3 text-sm text-destructive">
                 {error}
               </div>
             )}
@@ -80,7 +80,7 @@ export default function SignInPage() {
                 disabled={isPending}
               />
               {errors.email && (
-                <p className="text-sm text-red-600 dark:text-red-400">
+                <p className="text-sm text-destructive">
                   {errors.email.message}
                 </p>
               )}
@@ -91,7 +91,7 @@ export default function SignInPage() {
                 <Label htmlFor="password">Password</Label>
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+                  className="text-sm text-primary hover:underline"
                 >
                   Forgot password?
                 </Link>
@@ -104,7 +104,7 @@ export default function SignInPage() {
                 disabled={isPending}
               />
               {errors.password && (
-                <p className="text-sm text-red-600 dark:text-red-400">
+                <p className="text-sm text-destructive">
                   {errors.password.message}
                 </p>
               )}
@@ -120,7 +120,7 @@ export default function SignInPage() {
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-gray-500 dark:bg-gray-950 dark:text-gray-400">
+              <span className="bg-background px-2 text-muted-foreground">
                 Or continue with
               </span>
             </div>
@@ -155,11 +155,11 @@ export default function SignInPage() {
           </Button>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
             <Link
               href={ROUTES.SIGN_UP}
-              className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+              className="font-medium text-primary hover:underline"
             >
               Sign up
             </Link>

@@ -165,13 +165,7 @@ const Dashboard = () => {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Quick Actions */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-bold mb-4">Quick Actions</h3>
-              <div className="space-y-2">
-                <button
-                  onClick={() => router.push(ROUTES.WRITE)}
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-             Card>
+            <Card>
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>

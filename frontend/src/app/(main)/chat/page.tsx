@@ -67,16 +67,16 @@ export default function ChatPage() {
     : [];
 
   return (
-    <div className="h-screen bg-gray-50 flex">
+    <div className="h-screen bg-background flex">
       {/* Conversations List */}
-      <div className="w-80 bg-white border-r overflow-y-auto">
+      <div className="w-80 bg-card border-r overflow-y-auto">
         <div className="p-4 border-b">
           <h2 className="text-xl font-bold">Messages</h2>
         </div>
         
         <div className="divide-y">
           {conversations.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
+            <div className="p-8 text-center text-muted-foreground">
               No conversations yet
             </div>
           ) : (
@@ -88,22 +88,22 @@ export default function ChatPage() {
                 <div
                   key={conv.id}
                   onClick={() => setSelectedConversation(conv.id)}
-                  className={`p-4 cursor-pointer hover:bg-gray-50 ${
-                    selectedConversation === conv.id ? 'bg-blue-50' : ''
+                  className={`p-4 cursor-pointer hover:bg-accent ${
+                    selectedConversation === conv.id ? 'bg-accent' : ''
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center font-bold">
+                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center font-bold">
                         {otherUser?.username.charAt(0).toUpperCase()}
                       </div>
                       {isOnline && (
-                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium truncate">{otherUser?.full_name}</div>
-                      <div className="text-sm text-gray-500 truncate">
+                      <div className="text-sm text-muted-foreground truncate">
                         {conv.lastMessage || 'No messages yet'}
                       </div>
                     </div>
@@ -120,12 +120,12 @@ export default function ChatPage() {
         {selectedConversation ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b bg-white">
+            <div className="p-4 border-b bg-card">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-200" />
+                <div className="w-10 h-10 rounded-full bg-muted" />
                 <div>
                   <div className="font-medium">User Name</div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-muted-foreground">
                     {typingUsers.size > 0 ? 'Typing...' : 'Online'}
                   </div>
                 </div>
@@ -144,14 +144,14 @@ export default function ChatPage() {
                     <div
                       className={`max-w-md px-4 py-2 rounded-lg ${
                         isOwn
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white border border-gray-200'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-card border'
                       }`}
                     >
                       <div>{message.content}</div>
                       <div
                         className={`text-xs mt-1 ${
-                          isOwn ? 'text-blue-100' : 'text-gray-500'
+                          isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
                         }`}
                       >
                         {formatDate(message.created_at)}
@@ -163,7 +163,7 @@ export default function ChatPage() {
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t bg-white">
+            <div className="p-4 border-t bg-card">
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -179,11 +179,11 @@ export default function ChatPage() {
                     }
                   }}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-ring focus:outline-none"
                 />
                 <button
                   onClick={handleSendMessage}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
                 >
                   Send
                 </button>
@@ -191,7 +191,7 @@ export default function ChatPage() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
+          <div className="flex-1 flex items-center justify-center text-muted-foreground">
             <div className="text-center">
               <div className="text-6xl mb-4">💬</div>
               <div className="text-xl font-medium">Select a conversation</div>
