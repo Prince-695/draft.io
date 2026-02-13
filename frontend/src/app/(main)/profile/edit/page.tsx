@@ -8,6 +8,12 @@ import { z } from 'zod';
 import Image from 'next/image';
 import { useAuthStore } from '@/stores';
 import { ROUTES } from '@/utils/constants';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const profileSchema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -78,171 +84,175 @@ export default function EditProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-background py-8">
       <div className="max-w-3xl mx-auto px-4">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">Edit Profile</h1>
-          <p className="text-gray-600 mt-1">Update your profile information</p>
+          <p className="text-muted-foreground mt-1">Update your profile information</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Cover Image */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <label className="block text-sm font-medium mb-2">Cover Image</label>
-            <div className="relative h-48 bg-gray-200 rounded-lg overflow-hidden">
-              {coverPreview ? (
-                <Image
-                  src={coverPreview}
-                  alt="Cover"
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400">
-                  No cover image
-                </div>
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleCoverChange}
-                className="absolute inset-0 opacity-0 cursor-pointer"
-              />
-            </div>
-            <p className="text-xs text-gray-500 mt-2">Click to upload (max 5MB)</p>
-          </div>
-
-          {/* Avatar */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <label className="block text-sm font-medium mb-2">Profile Picture</label>
-            <div className="flex items-center gap-4">
-              <div className="relative w-24 h-24 rounded-full bg-gray-200 overflow-hidden">
-                {avatarPreview ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Cover Image</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="relative h-48 bg-muted rounded-lg overflow-hidden">
+                {coverPreview ? (
                   <Image
-                    src={avatarPreview}
-                    alt="Avatar"
+                    src={coverPreview}
+                    alt="Cover"
                     fill
                     className="object-cover"
                   />
                 ) : (
-                  <div className="flex items-center justify-center h-full text-2xl font-bold text-gray-400">
-                    {user?.username?.charAt(0).toUpperCase()}
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    No cover image
                   </div>
                 )}
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={handleAvatarChange}
+                  onChange={handleCoverChange}
                   className="absolute inset-0 opacity-0 cursor-pointer"
                 />
               </div>
-              <div className="text-sm text-gray-600">
-                Click to upload new avatar
+              <p className="text-xs text-muted-foreground mt-2">Click to upload (max 5MB)</p>
+            </CardContent>
+          </Card>
+
+          {/* Avatar */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Profile Picture</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <div className="relative cursor-pointer">
+                  <Avatar className="w-24 h-24">
+                    <AvatarImage src={avatarPreview} alt="Avatar" />
+                    <AvatarFallback className="text-2xl">
+                      {user?.username?.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Click to upload new avatar
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Basic Info */}
-          <div className="bg-white rounded-lg shadow p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Full Name *</label>
-              <input
-                type="text"
-                {...register('full_name')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              {errors.full_name && (
-                <p className="text-red-500 text-sm mt-1">{errors.full_name.message}</p>
-              )}
-            </div>
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="full_name">Full Name *</Label>
+                <Input
+                  id="full_name"
+                  type="text"
+                  {...register('full_name')}
+                />
+                {errors.full_name && (
+                  <p className="text-sm text-destructive">{errors.full_name.message}</p>
+                )}
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Bio</label>
-              <textarea
-                {...register('bio')}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Tell us about yourself..."
-              />
-              {errors.bio && (
-                <p className="text-red-500 text-sm mt-1">{errors.bio.message}</p>
-              )}
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  {...register('bio')}
+                  rows={4}
+                  placeholder="Tell us about yourself..."
+                />
+                {errors.bio && (
+                  <p className="text-sm text-destructive">{errors.bio.message}</p>
+                )}
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Location</label>
-              <input
-                type="text"
-                {...register('location')}
-                placeholder="City, Country"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  type="text"
+                  {...register('location')}
+                  placeholder="City, Country"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Website</label>
-              <input
-                type="url"
-                {...register('website')}
-                placeholder="https://yourwebsite.com"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              {errors.website && (
-                <p className="text-red-500 text-sm mt-1">{errors.website.message}</p>
-              )}
-            </div>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="website">Website</Label>
+                <Input
+                  id="website"
+                  type="url"
+                  {...register('website')}
+                  placeholder="https://yourwebsite.com"
+                />
+                {errors.website && (
+                  <p className="text-sm text-destructive">{errors.website.message}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Social Links */}
-          <div className="bg-white rounded-lg shadow p-6 space-y-4">
-            <h3 className="font-medium">Social Links</h3>
-            
-            <div>
-              <label className="block text-sm font-medium mb-1">Twitter</label>
-              <input
-                type="text"
-                {...register('twitter')}
-                placeholder="@username"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Social Links</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="twitter">Twitter</Label>
+                <Input
+                  id="twitter"
+                  type="text"
+                  {...register('twitter')}
+                  placeholder="@username"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">GitHub</label>
-              <input
-                type="text"
-                {...register('github')}
-                placeholder="username"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="github">GitHub</Label>
+                <Input
+                  id="github"
+                  type="text"
+                  {...register('github')}
+                  placeholder="username"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">LinkedIn</label>
-              <input
-                type="text"
-                {...register('linkedin')}
-                placeholder="username"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="linkedin">LinkedIn</Label>
+                <Input
+                  id="linkedin"
+                  type="text"
+                  {...register('linkedin')}
+                  placeholder="username"
+                />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Actions */}
           <div className="flex justify-end gap-3">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={() => router.back()}
-              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
+            </Button>
+            <Button type="submit">
               Save Changes
-            </button>
+            </Button>
           </div>
         </form>
       </div>

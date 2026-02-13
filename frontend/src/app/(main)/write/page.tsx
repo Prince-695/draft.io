@@ -12,6 +12,11 @@ import {
   useSEOSuggestions 
 } from '@/hooks/useAI';
 import { getErrorMessage } from '@/utils/helpers';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, X } from 'lucide-react';
 
 export default function WritePage() {
   const router = useRouter();
@@ -146,28 +151,28 @@ export default function WritePage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="border-b sticky top-0 bg-white z-10">
+    <div className="min-h-screen bg-background">
+      <div className="border-b sticky top-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 z-10">
         <div className="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
-          <button
+          <Button
+            variant="ghost"
             onClick={() => router.back()}
-            className="text-gray-600 hover:text-gray-900"
           >
-            ← Back
-          </button>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
           <div className="flex gap-3">
-            <button
+            <Button
+              variant="outline"
               onClick={handleSave}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               Save Draft
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handlePublish}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               Publish
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -175,31 +180,33 @@ export default function WritePage() {
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Error Alert */}
         {error && (
-          <div className="mb-6 rounded-md bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+          <div className="mb-6 rounded-md bg-destructive/15 p-4 text-sm text-destructive border border-destructive/30">
             <div className="flex justify-between items-start">
               <span>{error}</span>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setError(null)}
-                className="text-red-600 hover:text-red-800"
+                className="h-auto p-0 hover:bg-transparent"
               >
-                ×
-              </button>
+                <X className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         )}
 
         {/* Cover Image */}
         <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">Cover Image URL (optional)</label>
-          <input
+          <Label htmlFor="coverImage" className="mb-2">Cover Image URL (optional)</Label>
+          <Input
+            id="coverImage"
             type="url"
             value={coverImage}
             onChange={(e) => setCoverImage(e.target.value)}
             placeholder="https://example.com/image.jpg"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           {coverImage && (
-            <div className="mt-4 relative h-64 bg-gray-100 rounded-lg overflow-hidden">
+            <div className="mt-4 relative h-64 bg-muted rounded-lg overflow-hidden">
               <img
                 src={coverImage}
                 alt="Cover preview"
@@ -218,29 +225,26 @@ export default function WritePage() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Blog Title..."
-          className="w-full text-4xl font-bold border-none focus:outline-none mb-4 placeholder:text-gray-300"
+          className="w-full text-4xl font-bold border-none focus:outline-none mb-4 placeholder:text-muted-foreground bg-transparent"
         />
 
         {/* Tags */}
         <div className="mb-6">
           <div className="flex flex-wrap gap-2 mb-2">
             {tags.map((tag) => (
-              <span
-                key={tag}
-                className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm flex items-center gap-1"
-              >
+              <Badge key={tag} variant="secondary" className="gap-1">
                 {tag}
                 <button
                   onClick={() => removeTag(tag)}
-                  className="text-blue-500 hover:text-blue-700"
+                  className="hover:text-destructive"
                 >
-                  ×
+                  <X className="w-3 h-3" />
                 </button>
-              </span>
+              </Badge>
             ))}
           </div>
           <div className="flex gap-2">
-            <input
+            <Input
               type="text"
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
@@ -251,15 +255,15 @@ export default function WritePage() {
                 }
               }}
               placeholder="Add tags (press Enter)..."
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              className="flex-1"
             />
-            <button
+            <Button
               onClick={addTag}
               type="button"
-              className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+              variant="secondary"
             >
               Add
-            </button>
+            </Button>
           </div>
         </div>
 

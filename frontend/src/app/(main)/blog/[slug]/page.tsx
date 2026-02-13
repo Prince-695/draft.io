@@ -4,6 +4,13 @@ import { use } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { formatDate, calculateReadingTime } from '@/utils/helpers';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import { Heart, MessageCircle, Share2 } from 'lucide-react';
 
 interface BlogPageProps {
   params: Promise<{ slug: string }>;
@@ -33,10 +40,10 @@ export default function BlogPage({ params }: BlogPageProps) {
   const readingTime = calculateReadingTime(blog.content);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Cover Image */}
       {blog.cover_image && (
-        <div className="relative h-96 bg-gray-900">
+        <div className="relative h-96 bg-muted">
           <Image
             src={blog.cover_image}
             alt={blog.title}
@@ -48,105 +55,113 @@ export default function BlogPage({ params }: BlogPageProps) {
 
       {/* Article */}
       <article className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-lg p-8 md:p-12 -mt-20 relative z-10">
-          {/* Tags */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {blog.tags.map((tag) => (
-              <span
-                key={tag}
-                className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          {/* Title */}
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            {blog.title}
-          </h1>
-
-          {/* Author & Meta */}
-          <div className="flex items-center gap-4 pb-6 border-b">
-            <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden">
-              {blog.author.avatar_url ? (
-                <Image
-                  src={blog.author.avatar_url}
-                  alt={blog.author.full_name}
-                  width={48}
-                  height={48}
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-xl font-bold text-gray-400">
-                  {blog.author.username.charAt(0).toUpperCase()}
-                </div>
-              )}
+        <Card className="-mt-20 relative z-10">
+          <CardContent className="p-8 md:p-12">
+            {/* Tags */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {blog.tags.map((tag) => (
+                <Badge key={tag} variant="secondary">
+                  {tag}
+                </Badge>
+              ))}
             </div>
-            <div>
-              <div className="font-medium text-gray-900">{blog.author.full_name}</div>
-              <div className="text-sm text-gray-600">
-                {formatDate(blog.created_at)} · {readingTime} min read · {blog.views_count} views
+
+            {/* Title */}
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              {blog.title}
+            </h1>
+
+            {/* Author & Meta */}
+            <div className="flex items-center gap-4 pb-6">
+              <Avatar className="w-12 h-12">
+                {blog.author.avatar_url ? (
+                  <AvatarImage 
+                    src={blog.author.avatar_url} 
+                    alt={blog.author.full_name}
+                  />
+                ) : null}
+                <AvatarFallback>
+                  {blog.author.username.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="font-medium">{blog.author.full_name}</div>
+                <div className="text-sm text-muted-foreground">
+                  {formatDate(blog.created_at)} · {readingTime} min read · {blog.views_count} views
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Actions */}
-          <div className="flex gap-4 py-6 border-b">
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              ❤️ Like ({blog.likes_count})
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              💬 Comment ({blog.comments_count})
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              🔗 Share
-            </button>
-          </div>
+            <Separator className="mb-6" />
 
-          {/* Content */}
-          <div
-            className="prose prose-lg max-w-none mt-8"
-            dangerouslySetInnerHTML={{ __html: blog.content }}
-          />
-        </div>
+            {/* Actions */}
+            <div className="flex gap-4 pb-6">
+              <Button variant="default" className="gap-2">
+                <Heart className="w-4 h-4" />
+                Like ({blog.likes_count})
+              </Button>
+              <Button variant="outline" className="gap-2">
+                <MessageCircle className="w-4 h-4" />
+                Comment ({blog.comments_count})
+              </Button>
+              <Button variant="outline" className="gap-2">
+                <Share2 className="w-4 h-4" />
+                Share
+              </Button>
+            </div>
+
+            <Separator className="mb-8" />
+
+            {/* Content */}
+            <div
+              className="prose prose-lg max-w-none dark:prose-invert"
+              dangerouslySetInnerHTML={{ __html: blog.content }}
+            />
+          </CardContent>
+        </Card>
 
         {/* Comments Section */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mt-6">
-          <h2 className="text-2xl font-bold mb-6">Comments ({blog.comments_count})</h2>
-          
-          {/* Comment Form */}
-          <div className="mb-8">
-            <textarea
-              placeholder="Write a comment..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              rows={3}
-            />
-            <button className="mt-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              Post Comment
-            </button>
-          </div>
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Comments ({blog.comments_count})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Comment Form */}
+            <div className="mb-8">
+              <Textarea
+                placeholder="Write a comment..."
+                rows={3}
+              />
+              <Button className="mt-2">
+                Post Comment
+              </Button>
+            </div>
 
-          {/* Comments List */}
-          <div className="space-y-6">
-            <div className="text-center text-gray-500">No comments yet</div>
-          </div>
-        </div>
+            {/* Comments List */}
+            <div className="space-y-6">
+              <div className="text-center text-muted-foreground">No comments yet</div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Related Blogs */}
         <div className="mt-8">
           <h2 className="text-2xl font-bold mb-4">Related Posts</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow cursor-pointer">
-              <div className="text-sm text-gray-500 mb-2">Technology</div>
-              <h3 className="font-bold text-lg mb-2">Related Blog Title 1</h3>
-              <p className="text-gray-600 text-sm">Brief description of the blog post...</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow cursor-pointer">
-              <div className="text-sm text-gray-500 mb-2">Programming</div>
-              <h3 className="font-bold text-lg mb-2">Related Blog Title 2</h3>
-              <p className="text-gray-600 text-sm">Brief description of the blog post...</p>
-            </div>
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardContent className="p-4">
+                <Badge variant="secondary" className="mb-2">Technology</Badge>
+                <h3 className="font-bold text-lg mb-2">Related Blog Title 1</h3>
+                <p className="text-muted-foreground text-sm">Brief description of the blog post...</p>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardContent className="p-4">
+                <Badge variant="secondary" className="mb-2">Programming</Badge>
+                <h3 className="font-bold text-lg mb-2">Related Blog Title 2</h3>
+                <p className="text-muted-foreground text-sm">Brief description of the blog post...</p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </article>

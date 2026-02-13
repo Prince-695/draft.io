@@ -7,6 +7,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore } from '@/stores';
 import { ROUTES } from '@/utils/constants';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Progress } from '@/components/ui/progress';
 
 const questionnaireSchema = z.object({
   interests: z.array(z.string()).min(1, 'Select at least one interest'),
@@ -84,194 +89,179 @@ export default function QuestionnairePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
+    <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Personalize Your Experience</h1>
-          <p className="text-gray-600">Help us understand your interests to provide better recommendations</p>
+          <h1 className="text-3xl font-bold mb-2">Personalize Your Experience</h1>
+          <p className="text-muted-foreground">Help us understand your interests to provide better recommendations</p>
         </div>
 
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Step {step} of 4</span>
-            <span className="text-sm text-gray-500">{Math.round((step / 4) * 100)}%</span>
+            <span className="text-sm font-medium">Step {step} of 4</span>
+            <span className="text-sm text-muted-foreground">{Math.round((step / 4) * 100)}%</span>
           </div>
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-blue-600 transition-all duration-300"
-              style={{ width: `${(step / 4) * 100}%` }}
-            />
-          </div>
+          <Progress value={(step / 4) * 100} />
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-lg shadow-lg p-8">
-          {step === 1 && (
-            <div className="space-y-4">
-              <h2 className="text-2xl font-semibold mb-4">What are you interested in?</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {INTERESTS.map((interest) => (
-                  <button
-                    key={interest}
-                    type="button"
-                    onClick={() => toggleInterest(interest)}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      selectedInterests.includes(interest)
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    {interest}
-                  </button>
-                ))}
-              </div>
-              {errors.interests && (
-                <p className="text-red-500 text-sm">{errors.interests.message}</p>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Card>
+            <CardContent className="pt-6">
+              {step === 1 && (
+                <div className="space-y-4">
+                  <CardTitle className="text-2xl">What are you interested in?</CardTitle>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {INTERESTS.map((interest) => (
+                      <Button
+                        key={interest}
+                        type="button"
+                        variant={selectedInterests.includes(interest) ? "default" : "outline"}
+                        onClick={() => toggleInterest(interest)}
+                        className="h-auto py-3"
+                      >
+                        {interest}
+                      </Button>
+                    ))}
+                  </div>
+                  {errors.interests && (
+                    <p className="text-sm text-destructive">{errors.interests.message}</p>
+                  )}
+                </div>
               )}
-            </div>
-          )}
 
-          {step === 2 && (
-            <div className="space-y-4">
-              <h2 className="text-2xl font-semibold mb-4">Specific topics you'd like to read about?</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {TOPICS.map((topic) => (
-                  <button
-                    key={topic}
-                    type="button"
-                    onClick={() => toggleTopic(topic)}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      selectedTopics.includes(topic)
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    {topic}
-                  </button>
-                ))}
-              </div>
-              {errors.preferred_topics && (
-                <p className="text-red-500 text-sm">{errors.preferred_topics.message}</p>
+              {step === 2 && (
+                <div className="space-y-4">
+                  <CardTitle className="text-2xl">Specific topics you'd like to read about?</CardTitle>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {TOPICS.map((topic) => (
+                      <Button
+                        key={topic}
+                        type="button"
+                        variant={selectedTopics.includes(topic) ? "default" : "outline"}
+                        onClick={() => toggleTopic(topic)}
+                        className="h-auto py-3"
+                      >
+                        {topic}
+                      </Button>
+                    ))}
+                  </div>
+                  {errors.preferred_topics && (
+                    <p className="text-sm text-destructive">{errors.preferred_topics.message}</p>
+                  )}
+                </div>
               )}
-            </div>
-          )}
 
-          {step === 3 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-semibold mb-4">Your writing experience?</h2>
-                <div className="space-y-3">
-                  {[
-                    { value: 'beginner', label: 'Beginner', desc: 'Just starting out' },
-                    { value: 'intermediate', label: 'Intermediate', desc: 'Some writing experience' },
-                    { value: 'advanced', label: 'Advanced', desc: 'Regular blogger' },
-                    { value: 'professional', label: 'Professional', desc: 'Published writer' },
-                  ].map((option) => (
-                    <label
-                      key={option.value}
-                      className="flex items-start p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50"
-                    >
-                      <input
-                        type="radio"
-                        value={option.value}
-                        {...register('writing_experience')}
-                        className="mt-1 mr-3"
-                      />
-                      <div>
-                        <div className="font-medium">{option.label}</div>
-                        <div className="text-sm text-gray-500">{option.desc}</div>
+              {step === 3 && (
+                <div className="space-y-6">
+                  <CardTitle className="text-2xl">Your writing experience?</CardTitle>
+                  <RadioGroup {...register('writing_experience')} defaultValue="beginner">
+                    <div className="space-y-3">
+                      {[
+                        { value: 'beginner', label: 'Beginner', desc: 'Just starting out' },
+                        { value: 'intermediate', label: 'Intermediate', desc: 'Some writing experience' },
+                        { value: 'advanced', label: 'Advanced', desc: 'Regular blogger' },
+                        { value: 'professional', label: 'Professional', desc: 'Published writer' },
+                      ].map((option) => (
+                        <Label
+                          key={option.value}
+                          htmlFor={option.value}
+                          className="flex items-start p-4 border-2 rounded-lg cursor-pointer hover:bg-accent has-[:checked]:border-primary"
+                        >
+                          <RadioGroupItem value={option.value} id={option.value} className="mt-1" />
+                          <div className="ml-3">
+                            <div className="font-medium">{option.label}</div>
+                            <div className="text-sm text-muted-foreground">{option.desc}</div>
+                          </div>
+                        </Label>
+                      ))}
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
+
+              {step === 4 && (
+                <div className="space-y-6">
+                  <div>
+                    <CardTitle className="text-2xl mb-4">How often do you read blogs?</CardTitle>
+                    <RadioGroup {...register('reading_frequency')} defaultValue="weekly">
+                      <div className="space-y-3">
+                        {[
+                          { value: 'daily', label: 'Daily' },
+                          { value: 'weekly', label: 'Weekly' },
+                          { value: 'monthly', label: 'Monthly' },
+                          { value: 'occasionally', label: 'Occasionally' },
+                        ].map((option) => (
+                          <Label
+                            key={option.value}
+                            htmlFor={`reading-${option.value}`}
+                            className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-accent has-[:checked]:border-primary"
+                          >
+                            <RadioGroupItem value={option.value} id={`reading-${option.value}`} />
+                            <span className="ml-3 font-medium">{option.label}</span>
+                          </Label>
+                        ))}
                       </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+                    </RadioGroup>
+                  </div>
 
-          {step === 4 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-semibold mb-4">How often do you read blogs?</h2>
-                <div className="space-y-3">
-                  {[
-                    { value: 'daily', label: 'Daily' },
-                    { value: 'weekly', label: 'Weekly' },
-                    { value: 'monthly', label: 'Monthly' },
-                    { value: 'occasionally', label: 'Occasionally' },
-                  ].map((option) => (
-                    <label
-                      key={option.value}
-                      className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50"
-                    >
-                      <input
-                        type="radio"
-                        value={option.value}
-                        {...register('reading_frequency')}
-                        className="mr-3"
-                      />
-                      <span className="font-medium">{option.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-xl font-semibold mb-4">Preferred blog length?</h2>
-                <div className="space-y-3">
-                  {[
-                    { value: 'short', label: 'Short', desc: '< 5 min read' },
-                    { value: 'medium', label: 'Medium', desc: '5-10 min read' },
-                    { value: 'long', label: 'Long', desc: '> 10 min read' },
-                    { value: 'any', label: 'Any length' },
-                  ].map((option) => (
-                    <label
-                      key={option.value}
-                      className="flex items-start p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50"
-                    >
-                      <input
-                        type="radio"
-                        value={option.value}
-                        {...register('blog_length')}
-                        className="mt-1 mr-3"
-                      />
-                      <div>
-                        <div className="font-medium">{option.label}</div>
-                        {option.desc && <div className="text-sm text-gray-500">{option.desc}</div>}
+                  <div>
+                    <CardTitle className="text-xl mb-4">Preferred blog length?</CardTitle>
+                    <RadioGroup {...register('blog_length')} defaultValue="medium">
+                      <div className="space-y-3">
+                        {[
+                          { value: 'short', label: 'Short', desc: '< 5 min read' },
+                          { value: 'medium', label: 'Medium', desc: '5-10 min read' },
+                          { value: 'long', label: 'Long', desc: '> 10 min read' },
+                          { value: 'any', label: 'Any length' },
+                        ].map((option) => (
+                          <Label
+                            key={option.value}
+                            htmlFor={`length-${option.value}`}
+                            className="flex items-start p-4 border-2 rounded-lg cursor-pointer hover:bg-accent has-[:checked]:border-primary"
+                          >
+                            <RadioGroupItem value={option.value} id={`length-${option.value}`} className="mt-1" />
+                            <div className="ml-3">
+                              <div className="font-medium">{option.label}</div>
+                              {option.desc && <div className="text-sm text-muted-foreground">{option.desc}</div>}
+                            </div>
+                          </Label>
+                        ))}
                       </div>
-                    </label>
-                  ))}
+                    </RadioGroup>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          <div className="flex justify-between mt-8">
-            {step > 1 && (
-              <button
-                type="button"
-                onClick={() => setStep(step - 1)}
-                className="px-6 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Back
-              </button>
-            )}
-            
-            {step < 4 ? (
-              <button
-                type="button"
-                onClick={() => setStep(step + 1)}
-                className="ml-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Next
-              </button>
-            ) : (
-              <button
-                type="submit"
-                className="ml-auto px-8 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Complete Setup
-              </button>
-            )}
-          </div>
+              <div className="flex justify-between mt-8">
+                {step > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setStep(step - 1)}
+                  >
+                    Back
+                  </Button>
+                )}
+                
+                {step < 4 ? (
+                  <Button
+                    type="button"
+                    onClick={() => setStep(step + 1)}
+                    className="ml-auto"
+                  >
+                    Next
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    className="ml-auto"
+                  >
+                    Complete Setup
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </form>
       </div>
     </div>
