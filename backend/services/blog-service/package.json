@@ -7,12 +7,14 @@
     "dev": "bun --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target node",
     "start": "bun run dist/index.js",
-    "test": "bun test"
+    "test": "bun test",
+    "seed": "bun run src/seed.ts"
   },
   "keywords": ["blog", "content", "microservice", "cms"],
   "author": "Prince Rathod",
   "license": "MIT",
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
@@ -23,7 +25,8 @@
     "mongodb": "^6.3.0",
     "pg": "^8.11.3",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
