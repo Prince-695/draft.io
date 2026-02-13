@@ -264,9 +264,27 @@ export const getPublishedBlogs = async (
   offset: number = 0
 ): Promise<Blog[]> => {
   const result = await pool.query(
-    `SELECT * FROM blogs
-     WHERE status = 'published'
-     ORDER BY published_at DESC
+    `SELECT 
+      b.*,
+      json_build_object(
+        'id', u.id,
+        'username', u.username,
+        'full_name', u.full_name,
+        'email', u.email,
+        'avatar_url', up.avatar_url
+      ) as author,
+      COALESCE(
+        (SELECT json_agg(t.name)
+         FROM blog_tags bt
+         JOIN tags t ON bt.tag_id = t.id
+         WHERE bt.blog_id = b.id),
+        '[]'::json
+      ) as tags
+     FROM blogs b
+     LEFT JOIN users u ON b.author_id = u.id
+     LEFT JOIN user_profiles up ON u.id = up.user_id
+     WHERE b.status = 'published'
+     ORDER BY b.published_at DESC
      LIMIT $1 OFFSET $2`,
     [limit, offset]
   );

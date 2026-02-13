@@ -14,7 +14,7 @@ interface CreateBlogData {
 export const blogApi = {
   // Get all blogs (with pagination)
   getBlogs: async (page = 1, limit = 10): Promise<ApiResponse<PaginatedResponse<Blog>>> => {
-    const response = await apiClient.get(API_ENDPOINTS.BLOG.LIST, {
+    const response = await apiClient.get(`${API_ENDPOINTS.BLOG.LIST}/feed`, {
       params: { page, limit },
     });
     return response.data;
@@ -60,7 +60,7 @@ export const blogApi = {
 
   // Get trending blogs
   getTrending: async (): Promise<ApiResponse<Blog[]>> => {
-    const response = await apiClient.get(API_ENDPOINTS.BLOG.TRENDING);
+    const response = await apiClient.get(`${API_ENDPOINTS.BLOG.LIST}/trending`);
     return response.data;
   },
 

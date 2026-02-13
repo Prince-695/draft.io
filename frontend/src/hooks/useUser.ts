@@ -67,3 +67,21 @@ export function useSearchUsers(query: string) {
     enabled: !!query && query.length > 2,
   });
 }
+
+// Get user's following list
+export function useFollowing(userId: string) {
+  return useQuery({
+    queryKey: [QUERY_KEYS.USER, userId, 'following'],
+    queryFn: () => userApi.getFollowing(userId),
+    enabled: !!userId,
+  });
+}
+
+// Get user's followers list
+export function useFollowers(userId: string) {
+  return useQuery({
+    queryKey: [QUERY_KEYS.USER, userId, 'followers'],
+    queryFn: () => userApi.getFollowers(userId),
+    enabled: !!userId,
+  });
+}
