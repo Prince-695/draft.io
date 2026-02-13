@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Editor } from '@/components/Editor';
 import { AIAssistant } from '@/components/AIAssistant';
 import { ROUTES } from '@/utils/constants';
+import { 
+  useGenerateContent, 
+  useImproveContent, 
+  useGrammarCheck, 
+  useSEOSuggestions 
+} from '@/hooks/useAI';
+import { getErrorMessage } from '@/utils/helpers';
 
 export default function WritePage() {
   const router = useRouter();
@@ -14,7 +21,15 @@ export default function WritePage() {
   const [tagInput, setTagInput] = useState('');
   const [coverImage, setCoverImage] = useState('');
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
-  const [aiLoading, setAiLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // AI hooks
+  const { mutate: generateContent, isPending: isGenerating } = useGenerateContent();
+  const { mutate: improveContent, isPending: isImproving } = useImproveContent();
+  const { mutate: checkGrammar, isPending: isCheckingGrammar } = useGrammarCheck();
+  const { mutate: getSEO, isPending: isGettingSEO } = useSEOSuggestions();
+
+  const aiLoading = isGenerating || isImproving || isCheckingGrammar || isGettingSEO;
 
   const handleSave = async () => {
     try {
@@ -43,16 +58,90 @@ export default function WritePage() {
   };
 
   const handleAIGenerate = async (prompt: string, type: 'generate' | 'improve' | 'grammar' | 'seo') => {
-    setAiLoading(true);
+    setError(null);
+    
     try {
-      // TODO: Call AI Service API
-      console.log('AI Action:', { type, prompt });
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      switch (type) {
+        case 'generate':
+          // Generate new content from prompt
+          generateContent(
+            { prompt, context: content },
+            {
+              onSuccess: (response) => {
+                if (response.data?.result) {
+                  // Append generated content to existing content
+                  setContent(content + '\n\n' + response.data.result);
+                }
+              },
+              onError: (err) => {
+                setError(getErrorMessage(err));
+              },
+            }
+          );
+          break;
+
+        case 'improve':
+          // Improve existing content
+          if (!content) {
+            setError('Please write some content first before improving');
+            return;
+          }
+          improveContent(
+            { content, instructions: prompt },
+            {
+              onSuccess: (response) => {
+                if (response.data?.result) {
+                  setContent(response.data.result);
+                }
+              },
+              onError: (err) => {
+                setError(getErrorMessage(err));
+              },
+            }
+          );
+          break;
+
+        case 'grammar':
+          // Check grammar and spelling
+          if (!content) {
+            setError('Please write some content first before checking grammar');
+            return;
+          }
+          checkGrammar(content, {
+            onSuccess: (response) => {
+              if (response.data?.result) {
+                setContent(response.data.result);
+              }
+            },
+            onError: (err) => {
+              setError(getErrorMessage(err));
+            },
+          });
+          break;
+
+        case 'seo':
+          // Get SEO suggestions
+          if (!title || !content) {
+            setError('Please add title and content first for SEO analysis');
+            return;
+          }
+          getSEO(
+            { title, content },
+            {
+              onSuccess: (response) => {
+                console.log('SEO Suggestions:', response.data?.suggestions);
+                // You could show these in a modal or side panel
+              },
+              onError: (err) => {
+                setError(getErrorMessage(err));
+              },
+            }
+          );
+          break;
+      }
     } catch (error) {
       console.error('AI generation failed:', error);
-    } finally {
-      setAiLoading(false);
+      setError('Failed to process AI request. Please try again.');
     }
   };
 
@@ -84,6 +173,21 @@ export default function WritePage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* Error Alert */}
+        {error && (
+          <div className="mb-6 rounded-md bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+            <div className="flex justify-between items-start">
+              <span>{error}</span>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-600 hover:text-red-800"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Cover Image */}
         <div className="mb-6">
           <label className="block text-sm font-medium mb-2">Cover Image URL (optional)</label>
