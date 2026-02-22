@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Editor } from '@/components/Editor';
-import { AIAssistant } from '@/components/AIAssistant';
+import { AIToolbar } from '@/components/AIToolbar';
 import { ROUTES } from '@/utils/constants';
 import { 
   useGenerateContent, 
@@ -267,6 +267,11 @@ export default function WritePage() {
           </div>
         </div>
 
+        {/* AI Toolbar */}
+        <div className="mb-4 rounded-lg border border-border overflow-hidden">
+          <AIToolbar onGenerate={handleAIGenerate} isLoading={aiLoading} />
+        </div>
+
         {/* Editor */}
         <Editor
           content={content}
@@ -274,9 +279,6 @@ export default function WritePage() {
           placeholder="Start writing your amazing blog..."
         />
       </div>
-
-      {/* AI Assistant */}
-      <AIAssistant onGenerate={handleAIGenerate} isLoading={aiLoading} />
     </div>
   );
 }
