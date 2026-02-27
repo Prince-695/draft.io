@@ -42,45 +42,14 @@ services:
     networks:
       - draftio-network
 
-  # Zookeeper - Required by Kafka (manages Kafka cluster)
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    container_name: draftio-zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
-    volumes:
-      - zookeeper_data:/var/lib/zookeeper/data
-    networks:
-      - draftio-network
-
-  # Kafka - Event streaming platform (for microservices communication)
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    container_name: draftio-kafka
-    depends_on:
-      - zookeeper  # Kafka needs Zookeeper to run
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    ports:
-      - "9092:9092"  # Access on localhost:9092
-    volumes:
-      - kafka_data:/var/lib/kafka/data
-    networks:
-      - draftio-network
+  # Kafka removed — no longer used
 
 # Named volumes - Docker will manage these storage areas
 volumes:
   postgres_data:    # PostgreSQL data persists here
   mongodb_data:     # MongoDB data persists here
   redis_data:       # Redis data persists here
-  zookeeper_data:   # Zookeeper data persists here
-  kafka_data:       # Kafka data persists here
+  # kafka/zookeeper volumes removed
 
 # Network - All containers can talk to each other
 networks:
