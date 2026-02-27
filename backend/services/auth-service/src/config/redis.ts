@@ -17,9 +17,13 @@ dotenv.config();
 const redis = new Redis({
   host: process.env.REDIS_HOST || 'localhost',
   port: parseInt(process.env.REDIS_PORT || '6379'),
+  // Don't queue commands when offline — fail immediately so callers get an error
+  // instead of hanging forever waiting for Redis to reconnect
+  enableOfflineQueue: false,
+  // Retry connection in background but fail any pending commands fast
   retryStrategy(times) {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
+    if (times > 10) return null; // stop retrying after 10 attempts
+    return Math.min(times * 200, 3000);
   },
 });
 
