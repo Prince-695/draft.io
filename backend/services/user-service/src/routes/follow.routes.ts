@@ -8,18 +8,18 @@ const router = Router();
 router.use(authMiddleware);
 
 // Follow user
-router.post('/:userId/follow', followController.followUser);
+router.post('/follow/:userId', followController.followUser);
 
 // Unfollow user
-router.delete('/:userId/unfollow', followController.unfollowUser);
+router.delete('/unfollow/:userId', followController.unfollowUser);
 
 // Get user's followers
-router.get('/:userId/followers', followController.getFollowers);
+router.get('/followers/:userId', followController.getFollowers);
 
 // Get user's following
-router.get('/:userId/following', followController.getFollowing);
+router.get('/following/:userId', followController.getFollowing);
 
 // Check if current user follows another user
-router.get('/:userId/status', followController.checkFollowStatus);
+router.get('/status/:userId', followController.checkFollowStatus);
 
 export default router;

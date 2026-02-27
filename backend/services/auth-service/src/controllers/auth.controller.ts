@@ -66,8 +66,10 @@ export const register = async (req: Request, res: Response) => {
     const accessToken = generateAccessToken(user.id, user.email);
     const refreshToken = generateRefreshToken(user.id, user.email);
 
-    // 7. Store refresh token in Redis
-    await storeRefreshToken(user.id, refreshToken);
+    // 7. Store refresh token in Redis (best-effort — don't fail registration if Redis is down)
+    storeRefreshToken(user.id, refreshToken).catch((err) =>
+      console.warn('⚠️  Could not store refresh token in Redis (non-fatal):', err?.message)
+    );
 
     // 8. Publish "user.registered" event to Kafka
     try {
@@ -140,8 +142,10 @@ export const login = async (req: Request, res: Response) => {
     const accessToken = generateAccessToken(user.id, user.email);
     const refreshToken = generateRefreshToken(user.id, user.email);
 
-    // 4. Store refresh token in Redis
-    await storeRefreshToken(user.id, refreshToken);
+    // 4. Store refresh token in Redis (best-effort — don't fail login if Redis is down)
+    storeRefreshToken(user.id, refreshToken).catch((err) =>
+      console.warn('⚠️  Could not store refresh token in Redis (non-fatal):', err?.message)
+    );
 
     // 5. Update last login timestamp
     await UserModel.updateLastLogin(user.id);

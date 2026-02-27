@@ -1,21 +1,8 @@
-import { Kafka, Consumer } from 'kafkajs';
-import recommendationModel from '../models/recommendation.model';
-
-const kafka = new Kafka({
-  clientId: process.env.KAFKA_CLIENT_ID || 'recommendation-service',
-  brokers: (process.env.KAFKA_BROKERS || 'localhost:9092').split(','),
-});
-
-let consumer: Consumer;
-
+// Kafka removed — stub kept to avoid broken imports
 export const initKafkaConsumer = async () => {
-  try {
-    consumer = kafka.consumer({
-      groupId: process.env.KAFKA_GROUP_ID || 'recommendation-service-group',
-    });
+  console.log('ℹ️  Kafka removed — recommendation updates handled on-demand');
+};
 
-    await consumer.connect();
-    console.log('✅ Kafka consumer connected');
 
     // Subscribe to relevant topics
     await consumer.subscribe({

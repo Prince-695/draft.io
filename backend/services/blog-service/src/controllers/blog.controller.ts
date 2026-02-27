@@ -7,7 +7,7 @@ import * as analyticsModel from '../models/analytics.model';
 import { generateSlug, generateUniqueSlug } from '../utils/slug.util';
 import pool from '../config/database';
 import { getDB } from '../config/mongodb';
-import { publishEvent, EventType } from '../../../../shared/events';
+import { publishEvent, EventType } from '../../../../shared/events'; // no-op stubs
 
 // Create new blog
 export const createBlog = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -54,20 +54,6 @@ export const createBlog = async (req: AuthRequest, res: Response): Promise<void>
       await tagModel.addCategoriesToBlog(blog.id, categories);
     }
 
-    // Publish event if blog is created as published
-    if (blog.status === 'published') {
-      try {
-        await publishEvent(EventType.BLOG_PUBLISHED, {
-          blogId: blog.id,
-          authorId: blog.author_id,
-          title: blog.title,
-          slug: blog.slug,
-        });
-      } catch (kafkaError) {
-        console.error('Failed to publish blog.published event:', kafkaError);
-      }
-    }
-
     res.status(201).json({
       success: true,
       message: 'Blog created successfully',
@@ -98,15 +84,16 @@ export const getBlog = async (req: AuthRequest, res: Response): Promise<void> =>
       return;
     }
 
-    // Track view (only for published blogs)
+    // Track view (only for published blogs) — use actual UUID (in case blogId param was a slug)
+    const actualBlogId = blogData.blog.id;
     if (blogData.blog.status === 'published') {
-      await blogModel.incrementViewCount(blogId);
-      await analyticsModel.trackBlogView(blogId, req.user?.user_id);
+      await blogModel.incrementViewCount(actualBlogId);
+      await analyticsModel.trackBlogView(actualBlogId, req.user?.user_id);
     }
 
     // Get tags and categories
-    const tags = await tagModel.getBlogTags(blogId);
-    const categories = await tagModel.getBlogCategories(blogId);
+    const tags = await tagModel.getBlogTags(actualBlogId);
+    const categories = await tagModel.getBlogCategories(actualBlogId);
 
     res.json({
       success: true,
@@ -179,20 +166,6 @@ export const updateBlog = async (req: AuthRequest, res: Response): Promise<void>
       await tagModel.addCategoriesToBlog(blog.id, categories);
     }
 
-    // Publish event if blog is published
-    if (blog.status === 'published') {
-      try {
-        await publishEvent(EventType.BLOG_UPDATED, {
-          blogId: blog.id,
-          authorId: blog.author_id,
-          title: blog.title,
-          slug: blog.slug,
-        });
-      } catch (kafkaError) {
-        console.error('Failed to publish blog.updated event:', kafkaError);
-      }
-    }
-
     res.json({
       success: true,
       message: 'Blog updated successfully',
@@ -221,18 +194,6 @@ export const publishBlog = async (req: AuthRequest, res: Response): Promise<void
         error: 'Blog not found, already published, or unauthorized'
       });
       return;
-    }
-
-    // Publish Kafka event
-    try {
-      await publishEvent(EventType.BLOG_PUBLISHED, {
-        blogId: blog.id,
-        authorId: blog.author_id,
-        title: blog.title,
-        slug: blog.slug,
-      });
-    } catch (kafkaError) {
-      console.error('Failed to publish blog.published event:', kafkaError);
     }
 
     res.json({
@@ -298,20 +259,6 @@ export const deleteBlog = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    // Publish event if blog was published
-    if (blogData && blogData.blog.status === 'published') {
-      try {
-        await publishEvent(EventType.BLOG_DELETED, {
-          blogId: blogData.blog.id,
-          authorId: blogData.blog.author_id,
-          title: blogData.blog.title,
-          slug: blogData.blog.slug,
-        });
-      } catch (kafkaError) {
-        console.error('Failed to publish blog.deleted event:', kafkaError);
-      }
-    }
-
     res.json({
       success: true,
       message: 'Blog deleted successfully'
@@ -347,6 +294,32 @@ export const getMyBlogs = async (req: AuthRequest, res: Response): Promise<void>
     res.status(500).json({
       success: false,
       error: 'Failed to get blogs'
+    });
+  }
+};
+
+// Get all published blogs by a specific author (public)
+export const getUserBlogsById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { authorId } = req.params;
+    const { limit = 20, offset = 0 } = req.query;
+
+    const blogs = await blogModel.getUserBlogs(
+      authorId,
+      'published',
+      Number(limit),
+      Number(offset)
+    );
+
+    res.json({
+      success: true,
+      data: { blogs, count: blogs.length }
+    });
+  } catch (error) {
+    console.error('Get user blogs error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get user blogs'
     });
   }
 };

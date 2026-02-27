@@ -6,6 +6,14 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Safe Redis helpers — never throw even if Redis is disconnected
+const redisGet = async (key: string): Promise<string | null> => {
+  try { return await redisClient.get(key); } catch { return null; }
+};
+const redisSetEx = async (key: string, ttl: number, val: string): Promise<void> => {
+  try { await redisClient.setEx(key, ttl, val); } catch { /* cache unavailable */ }
+};
+
 interface BlogScore {
   blogId: string;
   score: number;
@@ -55,7 +63,7 @@ class RecommendationModel {
   async getPersonalizedFeed(userId: string, limit: number = 20): Promise<any[]> {
     // Check cache first
     const cacheKey = `feed:${userId}`;
-    const cached = await redisClient.get(cacheKey);
+    const cached = await redisGet(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
@@ -96,12 +104,12 @@ class RecommendationModel {
          FROM blogs b
          JOIN reading_history rh ON b.id = rh.blog_id
          WHERE rh.user_id = ANY($1)
-         AND b.id != ALL($2)
+         AND b.id != ALL($2::uuid[])
          AND b.status = 'published'
          GROUP BY b.id
          ORDER BY read_count DESC
          LIMIT 10`,
-        [similarUserIds, readBlogIds.length > 0 ? readBlogIds : ['']]
+        [similarUserIds, readBlogIds]
       );
       
       recommendations.push(
@@ -116,16 +124,17 @@ class RecommendationModel {
     if (userTags.length > 0) {
       const contentResult = await query(
         `SELECT b.id as blog_id, 
-                COUNT(DISTINCT bt.tag_name) as matching_tags,
+                COUNT(DISTINCT t.name) as matching_tags,
                 EXTRACT(EPOCH FROM (NOW() - b.published_at)) / 86400 as days_old
          FROM blogs b
-         LEFT JOIN blog_tags bt ON b.id = bt.blog_id
-         WHERE bt.tag_name = ANY($1)
-         AND b.id != ALL($2)
+         INNER JOIN blog_tags bt ON b.id = bt.blog_id
+         INNER JOIN tags t ON bt.tag_id = t.id
+         WHERE t.name = ANY($1)
+         AND b.id != ALL($2::uuid[])
          AND b.status = 'published'
          GROUP BY b.id, b.published_at
          LIMIT 20`,
-        [userTags, readBlogIds.length > 0 ? readBlogIds : ['']]
+        [userTags, readBlogIds]
       );
 
       recommendations.push(
@@ -147,12 +156,12 @@ class RecommendationModel {
        LEFT JOIN comments c ON b.id = c.blog_id
        WHERE b.published_at > NOW() - INTERVAL '7 days'
        AND b.status = 'published'
-       AND b.id != ALL($1)
+       AND b.id != ALL($1::uuid[])
        GROUP BY b.id, b.published_at
        HAVING COUNT(DISTINCT l.user_id) > 0
        ORDER BY (COUNT(DISTINCT l.user_id) + COUNT(DISTINCT c.id) * 2) / (EXTRACT(EPOCH FROM (NOW() - b.published_at)) / 3600 + 2) DESC
        LIMIT 10`,
-      [readBlogIds.length > 0 ? readBlogIds : ['']]
+      [readBlogIds]
     );
 
     recommendations.push(
@@ -184,15 +193,17 @@ class RecommendationModel {
         [limit]
       );
       const fallback = fallbackResult.rows;
-      await redisClient.setEx(cacheKey, 300, JSON.stringify(fallback)); // Cache 5 min
+      await redisSetEx(cacheKey, 300, JSON.stringify(fallback)); // Cache 5 min
       return fallback;
     }
 
     const blogsResult = await query(
-      `SELECT b.*, u.username, u.full_name, u.avatar_url
+      `SELECT b.*, u.username, u.full_name, COALESCE(up.avatar_url, '') as avatar_url
        FROM blogs b
        LEFT JOIN users u ON b.author_id = u.id
+       LEFT JOIN user_profiles up ON b.author_id = up.user_id
        WHERE b.id = ANY($1)`,
+      
       [sortedBlogIds]
     );
 
@@ -202,7 +213,7 @@ class RecommendationModel {
       .filter(Boolean);
 
     // Cache for 5 minutes
-    await redisClient.setEx(cacheKey, 300, JSON.stringify(blogs));
+    await redisSetEx(cacheKey, 300, JSON.stringify(blogs));
 
     return blogs;
   }
@@ -212,31 +223,47 @@ class RecommendationModel {
    */
   async getTrending(limit: number = 10): Promise<any[]> {
     const cacheKey = 'trending:blogs';
-    const cached = await redisClient.get(cacheKey);
+    const cached = await redisGet(cacheKey);
     if (cached) {
-      return JSON.parse(cached);
+      // Filter against DB so deleted blogs never surface from stale cache
+      const cachedBlogs: any[] = JSON.parse(cached);
+      if (cachedBlogs.length > 0) {
+        const ids = cachedBlogs.map((b: any) => b.id);
+        const existResult = await query(
+          `SELECT id FROM blogs WHERE id = ANY($1::uuid[]) AND status = 'published'`,
+          [ids]
+        );
+        const existingIds = new Set(existResult.rows.map((r: any) => r.id));
+        const freshBlogs = cachedBlogs.filter((b: any) => existingIds.has(b.id));
+        if (freshBlogs.length !== cachedBlogs.length) {
+          // Re-cache the pruned list so subsequent requests are also clean
+          await redisSetEx(cacheKey, 600, JSON.stringify(freshBlogs));
+        }
+        return freshBlogs;
+      }
     }
 
     const result = await query(
-      `SELECT b.*, u.username, u.full_name, u.avatar_url,
+      `SELECT b.*, u.username, u.full_name, COALESCE(up.avatar_url, '') as avatar_url,
               COUNT(DISTINCT l.user_id) as like_count,
               COUNT(DISTINCT c.id) as comment_count,
               (COUNT(DISTINCT l.user_id) + COUNT(DISTINCT c.id) * 2) / 
               (EXTRACT(EPOCH FROM (NOW() - b.published_at)) / 3600 + 2) as trending_score
        FROM blogs b
        LEFT JOIN users u ON b.author_id = u.id
+       LEFT JOIN user_profiles up ON b.author_id = up.user_id
        LEFT JOIN likes l ON b.id = l.blog_id
        LEFT JOIN comments c ON b.id = c.blog_id
        WHERE b.published_at > NOW() - INTERVAL '7 days'
        AND b.status = 'published'
-       GROUP BY b.id, u.id
+       GROUP BY b.id, u.id, up.user_id
        ORDER BY trending_score DESC
        LIMIT $1`,
       [limit]
     );
 
     const trending = result.rows;
-    await redisClient.setEx(cacheKey, 600, JSON.stringify(trending)); // Cache 10 min
+    await redisSetEx(cacheKey, 600, JSON.stringify(trending)); // Cache 10 min
 
     return trending;
   }
@@ -246,14 +273,14 @@ class RecommendationModel {
    */
   async getSimilarBlogs(blogId: string, limit: number = 5): Promise<any[]> {
     const cacheKey = `similar:${blogId}`;
-    const cached = await redisClient.get(cacheKey);
+    const cached = await redisGet(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
 
     // Get blog tags
     const tagsResult = await query(
-      `SELECT tag_name FROM blog_tags WHERE blog_id = $1`,
+      `SELECT t.name as tag_name FROM blog_tags bt JOIN tags t ON bt.tag_id = t.id WHERE bt.blog_id = $1`,
       [blogId]
     );
     const tags = tagsResult.rows.map((r) => r.tag_name);
@@ -264,22 +291,24 @@ class RecommendationModel {
 
     // Find blogs with matching tags
     const result = await query(
-      `SELECT b.*, u.username, u.full_name, u.avatar_url,
-              COUNT(DISTINCT bt.tag_name) as matching_tags
+      `SELECT b.*, u.username, u.full_name, COALESCE(up.avatar_url, '') as avatar_url,
+              COUNT(DISTINCT t.name) as matching_tags
        FROM blogs b
        LEFT JOIN users u ON b.author_id = u.id
-       LEFT JOIN blog_tags bt ON b.id = bt.blog_id
-       WHERE bt.tag_name = ANY($1)
+       LEFT JOIN user_profiles up ON b.author_id = up.user_id
+       INNER JOIN blog_tags bt ON b.id = bt.blog_id
+       INNER JOIN tags t ON bt.tag_id = t.id
+       WHERE t.name = ANY($1)
        AND b.id != $2
        AND b.status = 'published'
-       GROUP BY b.id, u.id
+       GROUP BY b.id, u.id, up.user_id
        ORDER BY matching_tags DESC
        LIMIT $3`,
       [tags, blogId, limit]
     );
 
     const similar = result.rows;
-    await redisClient.setEx(cacheKey, 3600, JSON.stringify(similar)); // Cache 1 hour
+    await redisSetEx(cacheKey, 3600, JSON.stringify(similar)); // Cache 1 hour
 
     return similar;
   }
@@ -289,10 +318,11 @@ class RecommendationModel {
    */
   async getReadingHistory(userId: string, limit: number = 20): Promise<any[]> {
     const result = await query(
-      `SELECT b.*, u.username, u.full_name, u.avatar_url, rh.read_at, rh.time_spent
+      `SELECT b.*, u.username, u.full_name, COALESCE(up.avatar_url, '') as avatar_url, rh.read_at, rh.time_spent
        FROM reading_history rh
        JOIN blogs b ON rh.blog_id = b.id
        LEFT JOIN users u ON b.author_id = u.id
+       LEFT JOIN user_profiles up ON b.author_id = up.user_id
        WHERE rh.user_id = $1
        ORDER BY rh.read_at DESC
        LIMIT $2`,

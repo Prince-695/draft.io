@@ -11,7 +11,7 @@ import redis from './config/redis';
 import notificationRoutes from './routes/notification.routes';
 import { initDatabase } from './models/notification.model';
 import { setupSocketHandlers } from './controllers/socket.controller';
-import { startKafkaConsumer } from './kafka/consumer';
+// Kafka removed
 
 dotenv.config();
 
@@ -59,10 +59,6 @@ const startServer = async () => {
     // Initialize database tables
     await initDatabase();
     console.log('✅ Database initialized');
-
-    // Start Kafka consumer for events
-    await startKafkaConsumer();
-    console.log('✅ Kafka consumer started');
 
     // Start HTTP + WebSocket server
     httpServer.listen(PORT, () => {

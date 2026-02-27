@@ -88,7 +88,7 @@ app.use('/api/users', createProxyMiddleware({
   target: process.env.USER_SERVICE_URL || 'http://localhost:5002',
   changeOrigin: true,
   pathRewrite: {
-    '^/api/users': ''
+    '^/api/users': '/users'
   },
   onError: (err, req, res) => {
     console.error('User Service Proxy Error:', err.message);
@@ -151,6 +151,7 @@ app.use('/api/ai', createProxyMiddleware({
 app.use('/api/notifications', createProxyMiddleware({
   target: process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:5006',
   changeOrigin: true,
+  ws: true,
   pathRewrite: {
     '^/api/notifications': '/notifications'
   },

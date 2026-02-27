@@ -1,21 +1,8 @@
-// Kafka Consumer - Listens to events and creates notifications
-
-import { Kafka, Consumer } from 'kafkajs';
-import { io } from '../index';
-import { sendNotificationToUser } from '../controllers/socket.controller';
-import * as NotificationModel from '../models/notification.model';
-
-const kafka = new Kafka({
-  clientId: 'notification-service',
-  brokers: [process.env.KAFKA_BROKER || 'localhost:9092']
-});
-
-const consumer: Consumer = kafka.consumer({
-  groupId: process.env.KAFKA_GROUP_ID || 'notification-service'
-});
-
+// Kafka removed — stub kept to avoid broken imports
 export const startKafkaConsumer = async () => {
-  await consumer.connect();
+  console.log('ℹ️  Kafka removed — notifications handled via direct calls');
+};
+
   
   // Subscribe to relevant topics
   await consumer.subscribe({

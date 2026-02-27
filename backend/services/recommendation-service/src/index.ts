@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { initDB } from './config/database';
 import { connectRedis } from './config/redis';
-import { initKafkaConsumer } from './kafka/consumer';
+// Kafka removed
 import recommendationRoutes from './routes/recommendation.routes';
 
 dotenv.config();
@@ -28,11 +28,12 @@ const startServer = async () => {
     // Initialize database
     await initDB();
 
-    // Connect to Redis
-    await connectRedis();
-
-    // Initialize Kafka consumer
-    await initKafkaConsumer();
+    // Connect to Redis (non-fatal — service works without it)
+    try {
+      await connectRedis();
+    } catch (redisError) {
+      console.warn('⚠️  Redis unavailable, continuing without cache:', (redisError as any)?.message);
+    }
 
     app.listen(PORT, () => {
       console.log(`🚀 Recommendation Service running on port ${PORT}`);

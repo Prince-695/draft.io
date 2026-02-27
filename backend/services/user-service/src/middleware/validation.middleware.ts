@@ -1,15 +1,18 @@
 import { body } from 'express-validator';
 
 export const validateUpdateProfile = [
-  body('bio').optional().isString().isLength({ max: 500 }).withMessage('Bio must be max 500 characters'),
-  body('location').optional().isString().isLength({ max: 100 }),
-  body('website').optional().isURL().withMessage('Invalid website URL'),
-  body('twitter_handle').optional().isString().matches(/^@?[a-zA-Z0-9_]{1,15}$/),
-  body('linkedin_url').optional().isURL(),
-  body('github_url').optional().isURL(),
-  body('interests').optional().isArray(),
-  body('writing_goals').optional().isArray(),
-  body('experience_level').optional().isIn(['beginner', 'intermediate', 'advanced']),
+  body('full_name').optional({ checkFalsy: true }).isString().isLength({ min: 2, max: 100 }).withMessage('Name must be 2-100 characters'),
+  body('bio').optional({ checkFalsy: true }).isString().isLength({ max: 500 }).withMessage('Bio must be max 500 characters'),
+  body('location').optional({ checkFalsy: true }).isString().isLength({ max: 100 }),
+  // website can be a full URL — skip validation when empty
+  body('website').optional({ checkFalsy: true }).isString().isLength({ max: 255 }).withMessage('Invalid website URL'),
+  // social handles: accept plain username, @handle, or full URL — just validate max length
+  body('twitter_handle').optional({ checkFalsy: true }).isString().isLength({ max: 100 }).withMessage('Invalid Twitter handle'),
+  body('linkedin_url').optional({ checkFalsy: true }).isString().isLength({ max: 255 }).withMessage('Invalid LinkedIn URL'),
+  body('github_url').optional({ checkFalsy: true }).isString().isLength({ max: 255 }).withMessage('Invalid GitHub URL'),
+  body('interests').optional({ checkFalsy: true }).isArray(),
+  body('writing_goals').optional({ checkFalsy: true }).isArray(),
+  body('experience_level').optional({ checkFalsy: true }).isIn(['beginner', 'intermediate', 'advanced']),
 ];
 
 export const validatePersonalization = [

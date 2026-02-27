@@ -6,11 +6,11 @@ import * as profileController from '../controllers/profile.controller';
 
 const router = Router();
 
-// Get profile by username (public)
-router.get('/:username', profileController.getProfile);
-
-// Get my profile (protected)
+// Get my profile (protected) — must come before /:username
 router.get('/me/profile', authMiddleware, profileController.getMyProfile);
+
+// Search users (protected) — must come before /:username
+router.get('/search/users', authMiddleware, profileController.searchUsers);
 
 // Update profile (protected)
 router.put('/', authMiddleware, validateUpdateProfile, profileController.updateProfile);
@@ -24,7 +24,7 @@ router.post('/cover', authMiddleware, upload.single('cover'), profileController.
 // Submit personalization (protected)
 router.post('/personalize', authMiddleware, validatePersonalization, profileController.submitPersonalization);
 
-// Search users (protected)
-router.get('/search/users', authMiddleware, profileController.searchUsers);
+// Get profile by username (public) — must be last (dynamic param catches everything)
+router.get('/:username', profileController.getProfile);
 
 export default router;
