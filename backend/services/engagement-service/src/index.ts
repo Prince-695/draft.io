@@ -7,7 +7,7 @@ import redis from './config/redis';
 import engagementRoutes from './routes/engagement.routes';
 import fs from 'fs';
 import path from 'path';
-import { kafkaProducer } from '../../../shared/events';
+// Kafka removed
 import { swaggerSpec } from './config/swagger';
 
 dotenv.config();
@@ -68,14 +68,6 @@ const startServer = async () => {
   try {
     await initDatabase();
     
-    // Connect Kafka Producer
-    try {
-      await kafkaProducer.connect();
-    } catch (kafkaError) {
-      console.warn('⚠️  Kafka Producer failed to connect:', kafkaError);
-      console.warn('⚠️  Service will continue without event publishing');
-    }
-    
     app.listen(PORT, () => {
       console.log('🚀 ========================================');
       console.log(`🚀 Engagement Service running on port ${PORT}`);
@@ -96,7 +88,6 @@ process.on('SIGTERM', async () => {
   console.log('⚠️  SIGTERM received, shutting down gracefully...');
   await pool.end();
   await redis.quit();
-  await kafkaProducer.disconnect();
   process.exit(0);
 });
 
