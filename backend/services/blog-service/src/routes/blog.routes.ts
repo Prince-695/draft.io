@@ -12,9 +12,11 @@ import * as blogController from '../controllers/blog.controller';
 
 const router = Router();
 
-// Public routes
+// Public routes (static paths must come before /:blogId)
 router.get('/feed', validatePagination, blogController.getPublishedBlogs);
 router.get('/search', validateSearchQuery, blogController.searchBlogs);
+router.get('/my-blogs', authMiddleware, validatePagination, blogController.getMyBlogs);
+router.get('/user/:authorId', validatePagination, blogController.getUserBlogsById);
 router.get('/:blogId', validateBlogId, optionalAuthMiddleware, blogController.getBlog);
 
 // Protected routes
@@ -23,7 +25,6 @@ router.put('/:blogId', authMiddleware, validateBlogId, validateUpdateBlog, blogC
 router.delete('/:blogId', authMiddleware, validateBlogId, blogController.deleteBlog);
 router.post('/:blogId/publish', authMiddleware, validateBlogId, blogController.publishBlog);
 router.post('/:blogId/unpublish', authMiddleware, validateBlogId, blogController.unpublishBlog);
-router.get('/me/blogs', authMiddleware, validatePagination, blogController.getMyBlogs);
 
 // Draft routes
 router.post('/:blogId/draft', authMiddleware, validateBlogId, validateDraftSave, blogController.saveDraft);
