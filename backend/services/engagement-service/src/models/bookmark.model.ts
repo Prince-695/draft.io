@@ -21,10 +21,52 @@ export const unbookmarkBlog = async (userId: string, blogId: string) => {
 // Get user bookmarks
 export const getUserBookmarks = async (userId: string, limit = 20, offset = 0) => {
   const result = await pool.query(
-    'SELECT blog_id, created_at FROM bookmarks WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
+    `SELECT
+       bm.blog_id,
+       bm.created_at AS saved_at,
+       b.title,
+       b.slug,
+       b.excerpt,
+       b.cover_image_url,
+       b.status,
+       b.published_at,
+       b.views_count,
+       b.likes_count,
+       b.comments_count,
+       b.reading_time,
+       u.id        AS author_id,
+       u.username  AS author_username,
+       u.full_name AS author_full_name,
+       up.avatar_url AS author_avatar
+     FROM bookmarks bm
+     JOIN blogs b ON b.id = bm.blog_id
+     LEFT JOIN users u  ON u.id = b.author_id
+     LEFT JOIN user_profiles up ON up.user_id = b.author_id
+     WHERE bm.user_id = $1
+     ORDER BY bm.created_at DESC
+     LIMIT $2 OFFSET $3`,
     [userId, limit, offset]
   );
-  return result.rows;
+  return result.rows.map((row) => ({
+    id: row.blog_id,
+    title: row.title,
+    slug: row.slug,
+    excerpt: row.excerpt,
+    cover_image_url: row.cover_image_url,
+    status: row.status,
+    published_at: row.published_at,
+    views_count: row.views_count,
+    likes_count: row.likes_count,
+    comments_count: row.comments_count,
+    reading_time: row.reading_time,
+    saved_at: row.saved_at,
+    author: {
+      id: row.author_id,
+      username: row.author_username,
+      full_name: row.author_full_name,
+      profile_picture_url: row.author_avatar,
+    },
+  }));
 };
 
 // Check if user bookmarked
