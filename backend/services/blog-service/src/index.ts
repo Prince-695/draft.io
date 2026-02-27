@@ -9,7 +9,7 @@ import blogRoutes from './routes/blog.routes';
 import tagRoutes from './routes/tag.routes';
 import fs from 'fs';
 import path from 'path';
-import { kafkaProducer } from '../../../shared/events';
+// Kafka removed
 import { swaggerSpec } from './config/swagger';
 
 dotenv.config();
@@ -77,14 +77,6 @@ const startServer = async () => {
   try {
     await initDatabase();
     
-    // Connect Kafka Producer
-    try {
-      await kafkaProducer.connect();
-    } catch (kafkaError) {
-      console.warn('⚠️  Kafka Producer failed to connect:', kafkaError);
-      console.warn('⚠️  Service will continue without event publishing');
-    }
-    
     app.listen(PORT, () => {
       console.log('🚀 ========================================');
       console.log(`🚀 Blog Service running on port ${PORT}`);
@@ -105,7 +97,6 @@ process.on('SIGTERM', async () => {
   console.log('⚠️  SIGTERM received, shutting down gracefully...');
   await pool.end();
   await redis.quit();
-  await kafkaProducer.disconnect();
   process.exit(0);
 });
 
