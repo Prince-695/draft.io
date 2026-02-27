@@ -32,16 +32,16 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Create indexes for faster queries
 -- Index on email (we search by email during login)
-CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
 -- Index on username (we search by username)
-CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 
 -- Index on verification token (for email verification)
-CREATE INDEX idx_users_verification_token ON users(verification_token);
+CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);
 
 -- Index on reset token (for password reset)
-CREATE INDEX idx_users_reset_token ON users(reset_token);
+CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_token);
 
 -- Function to update updated_at timestamp automatically
 CREATE OR REPLACE FUNCTION update_updated_at_column()
