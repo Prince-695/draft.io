@@ -76,18 +76,42 @@ export const createBlog = async (
   }
 };
 
-export const getBlogById = async (blogId: string): Promise<{ blog: Blog; content: BlogContent } | null> => {
-  const blogResult = await pool.query('SELECT * FROM blogs WHERE id = $1', [blogId]);
-  
+export const getBlogById = async (blogId: string): Promise<{ blog: Blog & { author?: any }; content: BlogContent } | null> => {
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(blogId);
+  const whereClause = isUUID ? 'b.id = $1' : 'b.slug = $1';
+  const blogResult = await pool.query(
+    `SELECT b.*,
+            u.id         AS _author_id,
+            u.username   AS _author_username,
+            u.full_name  AS _author_full_name,
+            up.avatar_url AS _author_avatar
+     FROM blogs b
+     LEFT JOIN users u         ON u.id = b.author_id
+     LEFT JOIN user_profiles up ON up.user_id = b.author_id
+     WHERE ${whereClause}`,
+    [blogId]
+  );
+
   if (blogResult.rows.length === 0) {
     return null;
   }
+
+  const row = blogResult.rows[0];
+  // Detach joined author fields from the blog row
+  const { _author_id, _author_username, _author_full_name, _author_avatar, ...rest } = row;
+  const blog: Blog & { author?: any } = {
+    ...rest,
+    author: {
+      id: _author_id ?? row.author_id,
+      username: _author_username ?? null,
+      full_name: _author_full_name ?? null,
+      profile_picture_url: _author_avatar ?? null,
+    },
+  };
   
-  const blog = blogResult.rows[0];
-  
-  // Get content from MongoDB
+  // Get content from MongoDB (always use actual UUID)
   const db = getDB();
-  const content = await db.collection('blog_content').findOne({ blog_id: blogId });
+  const content = await db.collection('blog_content').findOne({ blog_id: blog.id });
   
   return {
     blog,
