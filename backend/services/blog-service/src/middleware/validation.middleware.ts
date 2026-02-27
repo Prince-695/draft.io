@@ -9,7 +9,7 @@ export const validateCreateBlog = [
   body('content')
     .trim()
     .notEmpty().withMessage('Content is required')
-    .isLength({ min: 50 }).withMessage('Content must be at least 50 characters'),
+    .isLength({ min: 1 }).withMessage('Content cannot be empty'),
   
   body('excerpt')
     .optional()
@@ -41,7 +41,7 @@ export const validateUpdateBlog = [
     .optional()
     .trim()
     .notEmpty().withMessage('Content cannot be empty')
-    .isLength({ min: 50 }).withMessage('Content must be at least 50 characters'),
+    .isLength({ min: 10 }).withMessage('Content must be at least 10 characters'),
   
   body('excerpt')
     .optional()
