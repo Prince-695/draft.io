@@ -8,7 +8,7 @@ import pool from './config/database';
 import redis from './config/redis';
 import profileRoutes from './routes/profile.routes';
 import followRoutes from './routes/follow.routes';
-import { kafkaProducer } from '../../../shared/events';
+// Kafka removed
 import { swaggerSpec } from './config/swagger';
 
 dotenv.config();
@@ -70,14 +70,6 @@ const startServer = async (): Promise<void> => {
     // Initialize database
     await initDatabase();
 
-    // Connect Kafka Producer
-    try {
-      await kafkaProducer.connect();
-    } catch (kafkaError) {
-      console.warn('⚠️  Kafka Producer failed to connect:', kafkaError);
-      console.warn('⚠️  Service will continue without event publishing');
-    }
-
     // Start listening
     app.listen(PORT, () => {
       console.log('🚀 ========================================');
@@ -97,7 +89,6 @@ process.on('SIGTERM', async () => {
   console.log('⚠️  SIGTERM received, closing connections...');
   await pool.end();
   await redis.quit();
-  await kafkaProducer.disconnect();
   process.exit(0);
 });
 

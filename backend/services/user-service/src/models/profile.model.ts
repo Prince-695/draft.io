@@ -30,6 +30,7 @@ export interface CreateProfileData {
 }
 
 export interface UpdateProfileData {
+  full_name?: string;
   bio?: string;
   avatar_url?: string;
   cover_image_url?: string;
@@ -74,6 +75,11 @@ export const updateProfile = async (
   userId: string,
   data: UpdateProfileData
 ): Promise<UserProfile | null> => {
+  // Update full_name in users table if provided
+  if (data.full_name !== undefined) {
+    await pool.query('UPDATE users SET full_name = $1 WHERE id = $2', [data.full_name, userId]);
+  }
+
   const fields: string[] = [];
   const values: any[] = [];
   let paramCount = 1;
@@ -123,13 +129,24 @@ export const updateProfile = async (
     values.push(data.experience_level);
   }
 
-  if (fields.length === 0) return null;
+  if (fields.length === 0) {
+    // No profile fields to update (e.g. only full_name was changed) — upsert blank row then return
+    await pool.query(
+      `INSERT INTO user_profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
+      [userId]
+    );
+    return findProfileByUserId(userId);
+  }
 
+  // UPSERT: create the profile row if it doesn't exist, then apply updates
   values.push(userId);
+  const insertCols = ['user_id', ...fields.map(f => f.split(' = ')[0].trim())];
+  const insertPlaceholders = ['$' + paramCount, ...fields.map((_, i) => '$' + (i + 1))];
   const query = `
-    UPDATE user_profiles 
+    INSERT INTO user_profiles (${insertCols.join(', ')})
+    VALUES (${insertPlaceholders.join(', ')})
+    ON CONFLICT (user_id) DO UPDATE
     SET ${fields.join(', ')}
-    WHERE user_id = $${paramCount}
     RETURNING *
   `;
 

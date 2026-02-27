@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     linkedin_url VARCHAR(200),
     github_url VARCHAR(200),
     interests TEXT[], -- Array of interests from questionnaire
+    expertise_tags TEXT[] DEFAULT '{}', -- User's expertise tags
     writing_goals TEXT[], -- Array of writing goals
     experience_level VARCHAR(50), -- beginner, intermediate, advanced
     followers_count INTEGER DEFAULT 0,
