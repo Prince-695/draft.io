@@ -39,28 +39,41 @@ async function fetchPublicBlogs(params: {
   offset?: number;
 }): Promise<{ blogs: Blog[]; count: number }> {
   const token = useAuthStore.getState().tokens?.accessToken;
-  const query = new URLSearchParams();
-  if (params.q) query.set('q', params.q);
-  if (params.category && params.category !== 'All') query.set('category', params.category);
-  query.set('limit', String(params.limit ?? 18));
-  query.set('offset', String(params.offset ?? 0));
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  // Try search endpoint if we have a query, else use list endpoint
-  const endpoint = params.q
-    ? `${API_URL}/api/blogs/search?${query}`
-    : `${API_URL}/api/blogs?${query}`;
+  const limit = params.limit ?? 18;
+  const offset = params.offset ?? 0;
 
-  const res = await fetch(endpoint, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  // If there is a text search query, use /search endpoint
+  if (params.q) {
+    const query = new URLSearchParams({ q: params.q, limit: String(limit), offset: String(offset) });
+    const res = await fetch(`${API_URL}/api/blogs/search?${query}`, { headers });
+    if (!res.ok) throw new Error('Failed to fetch blogs');
+    const data = await res.json();
+    const raw: Blog[] = data?.data?.blogs ?? data?.blogs ?? [];
+    return { blogs: raw, count: raw.length };
+  }
 
+  // Otherwise use the public feed endpoint and filter by category client-side
+  // Fetch a larger page so category filtering still shows enough results
+  const fetchLimit = params.category ? Math.max(limit * 4, 60) : limit;
+  const query = new URLSearchParams({ limit: String(fetchLimit), offset: String(offset) });
+  const res = await fetch(`${API_URL}/api/blogs/feed?${query}`, { headers });
   if (!res.ok) throw new Error('Failed to fetch blogs');
   const data = await res.json();
-  // Handle both { blogs, count } and { data: { blogs, count } }
-  if (data.blogs) return data;
-  if (data.data?.blogs) return data.data;
-  if (Array.isArray(data.data)) return { blogs: data.data, count: data.data.length };
-  return { blogs: [], count: 0 };
+  let blogs: Blog[] = data?.data?.blogs ?? data?.blogs ?? [];
+
+  // Client-side category filter (category is a direct column on the blog row)
+  if (params.category) {
+    blogs = blogs.filter(
+      (b) => b.category?.toLowerCase() === params.category!.toLowerCase()
+    );
+  }
+
+  // Slice back to requested limit
+  const sliced = blogs.slice(0, limit);
+  return { blogs: sliced, count: blogs.length };
 }
 
 export default function PublicFeedPage() {
