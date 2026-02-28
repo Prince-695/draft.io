@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { ThemeSelector } from '@/components/ThemeSelector';
 import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
@@ -208,12 +209,26 @@ export default function SettingsPage() {
                 <CardTitle>Theme</CardTitle>
                 <CardDescription>Choose how Draft.IO looks for you</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-5">
+                {/* Color palette */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Color theme</p>
+                    <p className="font-medium">Color palette</p>
                     <p className="text-sm text-muted-foreground">
-                      Switch between light, dark, or system theme
+                      Pick a colour theme — applies to both light &amp; dark modes
+                    </p>
+                  </div>
+                  <ThemeSelector />
+                </div>
+
+                <Separator />
+
+                {/* Light / Dark / System toggle */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Light &amp; dark mode</p>
+                    <p className="text-sm text-muted-foreground">
+                      Switch between light, dark, or system preference
                     </p>
                   </div>
                   <ThemeSwitcher />
