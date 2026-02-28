@@ -70,7 +70,7 @@ export function Editor({ content, onChange, placeholder = 'Start writing...' }: 
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-lg dark:prose-invert max-w-none focus:outline-none min-h-[500px] px-4 py-3 text-foreground [&_p]:my-3 [&_p:empty]:min-h-[1.5em]',
+        class: 'prose prose-lg dark:prose-invert max-w-none focus:outline-none min-h-[500px] px-4 py-3 text-foreground',
       },
     },
   });
