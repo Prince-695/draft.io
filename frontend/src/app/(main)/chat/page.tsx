@@ -83,7 +83,14 @@ export default function ChatPage() {
           })
         );
         const valid = enriched.filter(Boolean) as any[];
-        if (valid.length > 0) setConversations(valid);
+        if (valid.length > 0) {
+          setConversations(valid);
+          // After loading conversations, probe online status for all partners
+          const socket = getChatSocket();
+          if (socket?.connected) {
+            valid.forEach((c: any) => socket.emit('check_online', { userId: c.user.id }));
+          }
+        }
       } catch {
         // ignore
       }
@@ -141,6 +148,8 @@ export default function ChatPage() {
     setPeopleSearch('');
     setPeopleResults([]);
     setShowSearch(false);
+    // Immediately ask the server for the current online status of this user
+    getChatSocket()?.emit('check_online', { userId: u.id });
   };
 
   // Auto-open conversation when arriving from a blog "Message" button

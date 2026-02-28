@@ -37,6 +37,13 @@ export function ChatSocketProvider() {
     addTypingUser,
     removeTypingUser,
   } = useChatStore();
+
+  // Utility: ask the server for the current online status of a list of user IDs
+  const checkOnlineStatus = (userIds: string[]) => {
+    const socket = getChatSocket();
+    if (!socket?.connected || userIds.length === 0) return;
+    userIds.forEach((uid) => socket.emit('check_online', { userId: uid }));
+  };
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -64,8 +71,28 @@ export function ChatSocketProvider() {
     });
     setChatSocket(socket);
 
-    socket.on('connect', () => console.log('✅ Chat socket connected:', socket.id));
+    socket.on('connect', () => {
+      console.log('✅ Chat socket connected:', socket.id);
+      // On (re)connect, probe the current online status of all known conversation
+      // partners — the store's onlineUsers set is wiped on every page reload.
+      const convUsers = useChatStore
+        .getState()
+        .conversations.map((c) => c.user.id)
+        .filter(Boolean);
+      if (convUsers.length > 0) {
+        convUsers.forEach((uid) => socket.emit('check_online', { userId: uid }));
+      }
+    });
     socket.on('connect_error', (e) => console.warn('⚠️ Chat socket error:', e.message));
+
+    // ── Online status query response ─────────────────────────────────────
+    socket.on('online_status', ({ userId, isOnline }: { userId: string; isOnline: boolean }) => {
+      if (isOnline) {
+        addOnlineUser(userId);
+      } else {
+        removeOnlineUser(userId);
+      }
+    });
 
     // ── Incoming message from another user ────────────────────────────────
     socket.on('receive_message', (raw: any) => {
