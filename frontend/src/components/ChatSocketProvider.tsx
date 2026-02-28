@@ -11,7 +11,6 @@
 import { useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'gooey-toast';
 import { useAuthStore, useChatStore } from '@/stores';
 import { getChatSocket, setChatSocket } from '@/lib/chatSocketInstance';
 import type { Notification } from '@/types';
@@ -108,12 +107,6 @@ export function ChatSocketProvider() {
         );
         const senderName =
           conv?.user?.full_name || conv?.user?.username || 'Someone';
-
-        // Toast pop-up
-        toast.show({
-          title: `💬 ${senderName}`,
-          description: msg.message.length > 80 ? msg.message.slice(0, 80) + '…' : msg.message,
-        });
 
         // Bell icon — inject into React Query notifications cache
         const notif: Notification = {

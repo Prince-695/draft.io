@@ -5,7 +5,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select';
 import { useCustomTheme, allThemes } from '@/hooks/useCustomTheme';
 import { Check } from 'lucide-react';
@@ -25,21 +24,19 @@ export function ThemeSelector() {
   return (
     <Select value={themeId} onValueChange={setCustomTheme}>
       <SelectTrigger className="w-56">
-        {/* Custom trigger: show current theme swatch + name */}
-        <span className="flex items-center gap-2 min-w-0">
-          {(() => {
-            const active = allThemes.find((t) => t.id === themeId) ?? allThemes[0];
-            return (
-              <>
-                <ColorSwatch primaryOklch={active.light['--primary']} />
-                <span className="truncate">{active.name}</span>
-              </>
-            );
-          })()}
-        </span>
+        {/* Custom display — position="popper" doesn't need a <SelectValue> for positioning */}
+        {(() => {
+          const active = allThemes.find((t) => t.id === themeId) ?? allThemes[0];
+          return (
+            <span className="flex items-center gap-2 min-w-0">
+              <ColorSwatch primaryOklch={active.light['--primary']} />
+              <span className="truncate">{active.name}</span>
+            </span>
+          );
+        })()}
       </SelectTrigger>
 
-      <SelectContent className="max-h-72 overflow-y-auto">
+      <SelectContent position="popper" className="max-h-72 overflow-y-auto">
         {allThemes.map((theme) => (
           <SelectItem key={theme.id} value={theme.id}>
             <span className="flex items-center gap-2">

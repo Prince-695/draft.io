@@ -164,8 +164,39 @@
   --shadow-2xl: var(--shadow-2xl);
 }
 
+html {
+  /* Reserve scrollbar space so layout never shifts when content grows */
+  scrollbar-gutter: stable;
+}
+
 body {
   letter-spacing: var(--tracking-normal);
+}
+
+/* ==================== Custom Thin Scrollbar ==================== */
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* WebKit (Chrome / Edge / Safari) */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted-foreground);
 }
 
 @layer base {
@@ -186,6 +217,12 @@ body {
 [data-gooey-description] {
   color: oklch(0.2178 0 0);
 }
+
+/* Light mode shadow: subtle dark drop-shadow */
+[data-gooey-pill] {
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.20)) drop-shadow(0 0 1px rgba(0, 0, 0, 0.12));
+}
+
 /* Dark mode: dark card background, light text */
 .dark [data-gooey-pill],
 .dark [data-gooey-body] {
@@ -196,6 +233,11 @@ body {
 }
 .dark [data-gooey-title] {
   color: oklch(0.9699 0.0013 106.4238);
+}
+
+/* Dark mode shadow: glowing white-ish outline to lift it off the dark bg */
+.dark [data-gooey-pill] {
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.18)) drop-shadow(0 4px 16px rgba(0, 0, 0, 0.60)) !important;
 }
 
 /* ==================== Tiptap / ProseMirror Editor ==================== */
