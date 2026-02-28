@@ -5,6 +5,11 @@ import {
   TitleSuggestionsRequest,
   OutlineGenerationRequest,
 } from '../types/ai.types';
+import {
+  buildGenerateBlogContentPrompt,
+  buildGenerateTitlesPrompt,
+  buildGenerateOutlinePrompt,
+} from '../prompts';
 
 // Generate blog content from topic
 export const generateContent = async (req: Request, res: Response) => {
@@ -24,12 +29,7 @@ export const generateContent = async (req: Request, res: Response) => {
       long: '1500-2000 words',
     };
 
-    const prompt = `Write a ${tone} blog post about "${topic}". 
-    The content should be approximately ${lengthMap[length]}.
-    Make it engaging, informative, and well-structured with proper paragraphs.
-    Structure the content with clearly separated paragraphs, each focusing on a single idea.
-    Use **bold text** for key terms, section headers, and important points throughout.
-    Do not include a title, just the main content.`;
+    const prompt = buildGenerateBlogContentPrompt(topic, tone, lengthMap[length]);
 
     const completion = await openai.chat.completions.create({
       model: DEFAULT_MODEL,
@@ -71,11 +71,7 @@ export const generateTitles = async (req: Request, res: Response) => {
       });
     }
 
-    const prompt = `Based on the following blog content, generate ${count} catchy, SEO-friendly title suggestions.
-    Return only the titles, one per line, without numbering or bullet points.
-    
-    Content:
-    ${content.substring(0, 1000)}`;
+    const prompt = buildGenerateTitlesPrompt(content, count);
 
     const completion = await openai.chat.completions.create({
       model: DEFAULT_MODEL,
@@ -119,13 +115,7 @@ export const generateOutline = async (req: Request, res: Response) => {
       });
     }
 
-    const prompt = `Create a detailed blog post outline for the topic: "${topic}"
-    Include approximately ${sections} main sections.
-    For each section, provide:
-    1. Section title
-    2. 2-3 key points to cover
-    
-    Format the outline in a clear, hierarchical structure.`;
+    const prompt = buildGenerateOutlinePrompt(topic, sections);
 
     const completion = await openai.chat.completions.create({
       model: DEFAULT_MODEL,

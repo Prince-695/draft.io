@@ -3,7 +3,7 @@ import { generateContent, generateTitles, generateOutline } from '../controllers
 import { checkGrammar, improveContent } from '../controllers/improvement.controller';
 import { generateSEO, summarizeContent } from '../controllers/seo.controller';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { rateLimiter, trackUsage } from '../middleware/ratelimit.middleware';
+import { rateLimiter } from '../middleware/ratelimit.middleware';
 import {
   validate,
   contentGenerationSchema,
@@ -20,7 +20,6 @@ const router = Router();
 // Apply authentication and rate limiting to all routes
 router.use(authenticateToken);
 router.use(rateLimiter);
-router.use(trackUsage);
 
 // Content generation routes
 router.post('/generate/content', validate(contentGenerationSchema), generateContent);

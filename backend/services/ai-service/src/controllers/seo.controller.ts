@@ -4,6 +4,7 @@ import {
   SEOSuggestionsRequest,
   SummarizationRequest,
 } from '../types/ai.types';
+import { buildGenerateSEOPrompt, buildSummarizeContentPrompt } from '../prompts';
 
 // Generate SEO suggestions
 export const generateSEO = async (req: Request, res: Response) => {
@@ -17,34 +18,7 @@ export const generateSEO = async (req: Request, res: Response) => {
       });
     }
 
-    const keywordsText = targetKeywords.length > 0 
-      ? `Target keywords: ${targetKeywords.join(', ')}` 
-      : '';
-
-    const prompt = `Analyze the following blog content and provide SEO improvement suggestions.
-    ${keywordsText}
-    
-    Provide suggestions in the following areas:
-    1. Meta title (50-60 characters)
-    2. Meta description (150-160 characters)
-    3. Keyword optimization recommendations
-    4. Content structure improvements for SEO
-    5. Internal/external linking suggestions
-    6. Readability score and improvements
-    
-    Format your response as JSON with this structure:
-    {
-      "metaTitle": "...",
-      "metaDescription": "...",
-      "keywords": ["keyword1", "keyword2", ...],
-      "structureImprovements": ["improvement1", "improvement2", ...],
-      "linkingSuggestions": ["suggestion1", "suggestion2", ...],
-      "readabilityScore": "good|fair|needs improvement",
-      "readabilityTips": ["tip1", "tip2", ...]
-    }
-    
-    Content:
-    ${content.substring(0, 2000)}`;
+    const prompt = buildGenerateSEOPrompt(content, targetKeywords);
 
     const completion = await openai.chat.completions.create({
       model: DEFAULT_MODEL,
@@ -103,11 +77,7 @@ export const summarizeContent = async (req: Request, res: Response) => {
       });
     }
 
-    const prompt = `Summarize the following content in approximately ${maxLength} words.
-    Make the summary concise, informative, and capture the key points.
-    
-    Content:
-    ${content}`;
+    const prompt = buildSummarizeContentPrompt(content, maxLength);
 
     const completion = await openai.chat.completions.create({
       model: DEFAULT_MODEL,

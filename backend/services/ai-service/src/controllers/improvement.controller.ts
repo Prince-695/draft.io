@@ -4,6 +4,12 @@ import {
   GrammarCheckRequest,
   ContentImprovementRequest,
 } from '../types/ai.types';
+import {
+  WRITING_ASSISTANT_SYSTEM_MESSAGE,
+  buildCheckGrammarPrompt,
+  buildCustomInstructionPrompt,
+  buildImproveContentPrompt,
+} from '../prompts';
 
 // Check grammar and spelling
 export const checkGrammar = async (req: Request, res: Response) => {
@@ -28,27 +34,10 @@ export const checkGrammar = async (req: Request, res: Response) => {
       });
     }
 
-    // Build the system message
-    const systemMessage = `You are an expert writing assistant. When given text to improve, 
-always return the COMPLETE modified text — never summarise or truncate it.`;
-
     // Primary instruction: honour custom user instruction if provided, else check grammar
     const mainInstruction = instructions && instructions.trim()
-      ? `${instructions.trim()}\n\nReturn the COMPLETE modified text (no truncation).\n\nText to modify:\n${content}`
-      : `Check the following text for grammar, spelling, and punctuation errors.
-Provide a corrected version and list the specific errors found.
-
-Format your response as JSON with this structure:
-{
-  "correctedText": "the corrected text here",
-  "errors": [
-    {"type": "grammar|spelling|punctuation", "original": "...", "correction": "...", "explanation": "..."}
-  ],
-  "errorCount": number
-}
-
-Text to check:
-${content}`;
+      ? buildCustomInstructionPrompt(instructions, content)
+      : buildCheckGrammarPrompt(content);
 
     // Build messages array: optional history for context + current instruction
     const historyMessages = (conversationHistory ?? []).slice(-4).map((m) => ({
@@ -57,12 +46,10 @@ ${content}`;
     }));
 
     const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-      { role: 'system', content: systemMessage },
+      { role: 'system', content: WRITING_ASSISTANT_SYSTEM_MESSAGE },
       ...historyMessages,
       { role: 'user', content: mainInstruction },
     ];
-
-    const prompt = mainInstruction; // kept for fallback below
 
     const completion = await openai.chat.completions.create({
       model: DEFAULT_MODEL,
@@ -153,20 +140,10 @@ export const improveContent = async (req: Request, res: Response) => {
       });
     }
 
-    const improvementPrompts = {
-      clarity: 'Make the following text clearer and easier to understand while preserving its meaning.',
-      engagement: 'Make the following text more engaging and captivating for readers.',
-      professionalism: 'Improve the professionalism and tone of the following text.',
-      all: 'Improve the following text by making it clearer, more engaging, and more professional.',
-    };
-
-    const systemMessage = `You are an expert writing assistant. When asked to modify text, 
-always return the COMPLETE modified text — never truncate, summarise, or omit any part of it.`;
-
     // Custom instruction overrides the stock improvement type
     const mainInstruction = instructions && instructions.trim()
-      ? `${instructions.trim()}\n\nReturn the COMPLETE modified text.\n\nOriginal text:\n${content}`
-      : `${improvementPrompts[improvementType]}\n\nProvide the improved version and explain the key changes made.\n\nOriginal text:\n${content}`;
+      ? buildCustomInstructionPrompt(instructions, content)
+      : buildImproveContentPrompt(improvementType, content);
 
     const historyMessages = (conversationHistory ?? []).slice(-4).map((m) => ({
       role: m.role as 'user' | 'assistant',
@@ -174,7 +151,7 @@ always return the COMPLETE modified text — never truncate, summarise, or omit 
     }));
 
     const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-      { role: 'system', content: systemMessage },
+      { role: 'system', content: WRITING_ASSISTANT_SYSTEM_MESSAGE },
       ...historyMessages,
       { role: 'user', content: mainInstruction },
     ];

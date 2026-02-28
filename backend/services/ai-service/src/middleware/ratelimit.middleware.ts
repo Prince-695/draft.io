@@ -2,14 +2,19 @@ import { Request, Response, NextFunction } from 'express';
 import redisClient from '../config/redis';
 import { AuthRequest } from './auth.middleware';
 
-const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS) || 900000; // 15 minutes
-const RATE_LIMIT_FREE_MAX = Number(process.env.RATE_LIMIT_FREE_MAX) || 10;
-const RATE_LIMIT_PREMIUM_MAX = Number(process.env.RATE_LIMIT_PREMIUM_MAX) || 100;
+// Every user gets 10 AI requests per calendar month, regardless of plan.
+const MONTHLY_LIMIT = Number(process.env.AI_MONTHLY_LIMIT) || 10;
+
+/** Returns the Redis key for a user's monthly AI request counter, e.g. "ai:monthly:abc123:2026-02" */
+const monthlyKey = (userId: string): string => {
+  const now = new Date();
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  return `ai:monthly:${userId}:${month}`;
+};
 
 export const rateLimiter = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
-    const userPlan = req.user?.plan || 'free';
 
     if (!userId) {
       return res.status(401).json({
@@ -18,45 +23,33 @@ export const rateLimiter = async (req: AuthRequest, res: Response, next: NextFun
       });
     }
 
-    const key = `ai:ratelimit:${userId}`;
-    const now = Date.now();
-    const windowStart = now - RATE_LIMIT_WINDOW_MS;
+    const key = monthlyKey(userId);
 
-    // Get current usage
-    const usage = await redisClient.zCount(key, windowStart, now);
+    // Fetch current month's count (returns null if key doesn't exist yet)
+    const raw = await redisClient.get(key);
+    const used = raw ? parseInt(raw, 10) : 0;
 
-    const maxRequests = userPlan === 'premium' ? RATE_LIMIT_PREMIUM_MAX : RATE_LIMIT_FREE_MAX;
-
-    if (usage >= maxRequests) {
+    if (used >= MONTHLY_LIMIT) {
       return res.status(429).json({
         success: false,
-        error: 'Rate limit exceeded. Please try again later or upgrade to premium.',
-        usage: {
-          current: usage,
-          limit: maxRequests,
-          resetIn: RATE_LIMIT_WINDOW_MS - (now % RATE_LIMIT_WINDOW_MS),
-        },
+        error: `You have used all ${MONTHLY_LIMIT} AI requests for this month. Your quota resets on the 1st of next month.`,
+        usage: { used, limit: MONTHLY_LIMIT },
       });
     }
 
-    // Add current request to sorted set
-    await redisClient.zAdd(key, { score: now, value: `${now}` });
+    // Increment counter; set TTL to 35 days so it naturally expires after the month
+    await redisClient.incr(key);
+    await redisClient.expire(key, 60 * 60 * 24 * 35);
 
-    // Remove old entries
-    await redisClient.zRemRangeByScore(key, 0, windowStart);
-
-    // Set expiry on the key
-    await redisClient.expire(key, Math.ceil(RATE_LIMIT_WINDOW_MS / 1000));
-
-    // Add usage info to response headers
-    res.setHeader('X-RateLimit-Limit', maxRequests.toString());
-    res.setHeader('X-RateLimit-Remaining', (maxRequests - usage - 1).toString());
-    res.setHeader('X-RateLimit-Reset', new Date(now + RATE_LIMIT_WINDOW_MS).toISOString());
+    // Expose quota info in response headers so the frontend can update the usage indicator
+    res.setHeader('X-AI-Requests-Used', (used + 1).toString());
+    res.setHeader('X-AI-Requests-Limit', MONTHLY_LIMIT.toString());
+    res.setHeader('X-AI-Requests-Remaining', (MONTHLY_LIMIT - used - 1).toString());
 
     next();
   } catch (error) {
     console.error('Rate limiter error:', error);
-    // Don't block request if rate limiter fails
+    // Don't block the request if Redis is unavailable
     next();
   }
 };
