@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,23 @@ import { ROUTES } from '@/utils/constants';
 export function LandingNavbar() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  function handleNav(path: string) {
+    setMenuOpen(false);
+    router.push(path);
+  }
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
@@ -49,42 +67,46 @@ export function LandingNavbar() {
           {user ? (
             /* User is logged in - show profile dropdown */
             <div className="flex items-center gap-2">
-              <Button 
+              <Button
                 variant="ghost"
                 onClick={() => router.push(ROUTES.DASHBOARD)}
               >
                 Dashboard
               </Button>
-              <div className="relative group">
-                <button className="flex items-center gap-2 p-2 hover:bg-accent rounded-lg transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
-                    {user.username?.charAt(0).toUpperCase()}
-                  </div>
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setMenuOpen((prev) => !prev)}
+                  className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary hover:ring-2 hover:ring-primary/50 transition-all focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  {user.username?.charAt(0).toUpperCase()}
                 </button>
 
-                <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-xl hidden group-hover:block">
-                  <button
-                    onClick={() => router.push(`${ROUTES.PROFILE}/${user.username}`)}
-                    className="w-full px-4 py-2 text-left hover:bg-accent rounded-t-lg text-foreground transition-colors flex items-center gap-2"
-                  >
-                    <User className="w-4 h-4" />
-                    Profile
-                  </button>
-                  <button
-                    onClick={() => router.push(ROUTES.PROFILE_EDIT)}
-                    className="w-full px-4 py-2 text-left hover:bg-accent text-foreground transition-colors flex items-center gap-2"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Settings
-                  </button>
-                  <button
-                    onClick={logout}
-                    className="w-full px-4 py-2 text-left hover:bg-accent text-destructive rounded-b-lg transition-colors flex items-center gap-2"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Logout
-                  </button>
-                </div>
+                {menuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-md shadow-lg z-50 py-1">
+                    <button
+                      onClick={() => handleNav(`${ROUTES.PROFILE}/${user.username}`)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
+                    >
+                      <User className="w-4 h-4" />
+                      Profile
+                    </button>
+                    <button
+                      onClick={() => handleNav(ROUTES.PROFILE_EDIT)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Settings
+                    </button>
+                    <div className="my-1 h-px bg-border" />
+                    <button
+                      onClick={() => { setMenuOpen(false); logout(); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-accent transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Logout
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
