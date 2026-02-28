@@ -76,6 +76,13 @@ export default function QuestionnairePage() {
     }
   };
 
+  const seedRecommendations = (interests: string[]) => {
+    // Fire-and-forget: sync interests into the recommendation engine
+    apiClient
+      .post(API_ENDPOINTS.RECOMMENDATIONS.SEED_INTERESTS, { interests })
+      .catch(() => { /* non-critical — feed will still work via reading history */ });
+  };
+
   const onSubmit = async (data: QuestionnaireData) => {
     try {
       // Combine interests and preferred_topics for the backend
@@ -86,9 +93,9 @@ export default function QuestionnairePage() {
         writing_goals: [`Reads ${data.reading_frequency}`, `Prefers ${data.blog_length} posts`],
       });
       // Also update local store
-      updateUser({
-        interests: allInterests,
-      });
+      updateUser({ interests: allInterests });
+      // Seed recommendation engine with explicit interests
+      seedRecommendations(allInterests);
       router.push(ROUTES.DASHBOARD);
     } catch (error) {
       console.error('Failed to save questionnaire:', error);
@@ -109,6 +116,8 @@ export default function QuestionnairePage() {
           writing_goals: [`Reads ${values.reading_frequency}`, `Prefers ${values.blog_length} posts`],
         });
         updateUser({ interests: allInterests });
+        // Seed recommendation engine with explicit interests
+        seedRecommendations(allInterests);
       }
     } catch (error) {
       console.error('Failed to save questionnaire:', error);

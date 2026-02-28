@@ -70,6 +70,29 @@ router.get('/similar/:blogId', optionalAuth, async (req: AuthRequest, res: Respo
 });
 
 /**
+ * Seed explicit interests from onboarding questionnaire
+ * POST /seed-interests
+ * Body: { interests: string[] }
+ */
+router.post('/seed-interests', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { interests } = req.body;
+
+    if (!Array.isArray(interests) || interests.length === 0) {
+      return res.status(400).json({ success: false, error: 'interests array required' });
+    }
+
+    await recommendationModel.seedInterests(userId, interests);
+
+    res.json({ success: true, message: 'Interests seeded successfully' });
+  } catch (error) {
+    console.error('Error seeding interests:', error);
+    res.status(500).json({ success: false, error: 'Failed to seed interests' });
+  }
+});
+
+/**
  * Track blog read event
  * POST /track-read
  * Body: { blogId, timeSpent }

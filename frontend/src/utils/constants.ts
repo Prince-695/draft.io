@@ -96,6 +96,8 @@ export const API_ENDPOINTS = {
     FEED: '/api/recommendations/feed',
     TRENDING: '/api/recommendations/trending',
     SIMILAR: '/api/recommendations/similar',
+    SEED_INTERESTS: '/api/recommendations/seed-interests',
+    TRACK_READ: '/api/recommendations/track-read',
   },
 } as const;
 
