@@ -1,81 +1,87 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores';
 import { socketService } from '@/lib/socket';
 import { formatDate } from '@/utils/helpers';
-import { Notification } from '@/types';
+import apiClient from '@/lib/api/client';
+import { API_ENDPOINTS, ROUTES } from '@/utils/constants';
+import type { Notification } from '@/types';
+
+const ICONS: Record<string, string> = {
+  like: '❤️', comment: '💬', follow: '👤', mention: '@', default: '🔔',
+};
+
+async function fetchNotifications(): Promise<Notification[]> {
+  const res = await apiClient.get(API_ENDPOINTS.NOTIFICATIONS.LIST, {
+    params: { limit: 10, offset: 0 },
+  });
+  const payload = res.data?.data ?? res.data;
+  return Array.isArray(payload) ? payload : (payload?.notifications ?? []);
+}
 
 export function NotificationDropdown() {
-  const { user } = useAuthStore();
+  const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
+  const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const { data: notifications = [] } = useQuery<Notification[]>({
+    queryKey: ['notifications'],
+    queryFn: fetchNotifications,
+    enabled: isAuthenticated,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    refetchInterval: 60_000, // poll every 60s as fallback
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: async () => {
+      await apiClient.patch(API_ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  // Real-time: listen for new notifications via socket
   useEffect(() => {
-    // TODO: Fetch notifications from API
-    const mockNotifications: Notification[] = [
-      {
-        id: '1',
-        user_id: user?.id || '',
-        type: 'like',
-        title: 'New like',
-        message: 'John Doe liked your blog post',
-        is_read: false,
-        created_at: new Date().toISOString(),
-      },
-    ];
-    setNotifications(mockNotifications);
-    setUnreadCount(mockNotifications.filter(n => !n.is_read).length);
-
-    // Listen for real-time notifications
     const socket = socketService.getSocket();
-    if (socket) {
-      socket.on('notification:new', (notification: Notification) => {
-        setNotifications((prev) => [notification, ...prev]);
-        setUnreadCount((prev) => prev + 1);
-      });
-    }
-  }, [user]);
+    if (!socket) return;
+    const handler = (notification: Notification) => {
+      queryClient.setQueryData<Notification[]>(['notifications'], (prev = []) => [
+        notification,
+        ...prev,
+      ]);
+    };
+    socket.on('notification:new', handler);
+    return () => { socket.off('notification:new', handler); };
+  }, [queryClient]);
 
-  const markAsRead = async (id: string) => {
-    // TODO: Call API to mark as read
-    setNotifications(notifications.map(n =>
-      n.id === id ? { ...n, is_read: true } : n
-    ));
-    setUnreadCount((prev) => Math.max(0, prev - 1));
-  };
-
-  const markAllAsRead = async () => {
-    // TODO: Call API to mark all as read
-    setNotifications(notifications.map(n => ({ ...n, is_read: true })));
-    setUnreadCount(0);
-  };
-
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'like':
-        return '❤️';
-      case 'comment':
-        return '💬';
-      case 'follow':
-        return '👤';
-      case 'mention':
-        return '@';
-      default:
-        return '🔔';
-    }
-  };
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="relative p-2 rounded-lg text-foreground/70 hover:text-foreground hover:bg-accent transition-colors"
+        aria-label="Notifications"
       >
-        <span className="text-2xl">🔔</span>
+        <span className="text-xl">🔔</span>
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+          <span className="absolute top-0.5 right-0.5 min-w-4.5 h-4.5 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center px-1">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -83,53 +89,51 @@ export function NotificationDropdown() {
 
       {isOpen && (
         <>
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setIsOpen(false)}
-          />
-          <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border z-20">
-            <div className="p-4 border-b flex justify-between items-center">
-              <h3 className="font-bold text-lg">Notifications</h3>
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllAsRead}
-                  className="text-sm text-blue-600 hover:text-blue-700"
-                >
-                  Mark all as read
-                </button>
-              )}
+          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+          <div className="absolute right-0 mt-2 w-96 bg-popover border border-border rounded-xl shadow-xl z-20 overflow-hidden">
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-border flex justify-between items-center">
+              <h3 className="font-bold text-base">Notifications</h3>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={() => markAllReadMutation.mutate()}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Mark all read
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="max-h-96 overflow-y-auto">
+            {/* List */}
+            <div className="max-h-95 overflow-y-auto">
               {notifications.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
+                <div className="p-8 text-center text-muted-foreground">
                   <div className="text-4xl mb-2">🔔</div>
-                  <div>No notifications yet</div>
+                  <p className="text-sm">No notifications yet</p>
                 </div>
               ) : (
-                notifications.map((notification) => (
+                notifications.map((n) => (
                   <div
-                    key={notification.id}
-                    onClick={() => !notification.is_read && markAsRead(notification.id)}
-                    className={`p-4 border-b hover:bg-gray-50 cursor-pointer ${
-                      !notification.is_read ? 'bg-blue-50' : ''
+                    key={n.id}
+                    className={`px-4 py-3 border-b border-border/50 hover:bg-accent/50 transition-colors ${
+                      !n.is_read ? 'bg-primary/5' : ''
                     }`}
                   >
-                    <div className="flex gap-3">
-                      <div className="text-2xl flex-shrink-0">
-                        {getNotificationIcon(notification.type)}
-                      </div>
+                    <div className="flex gap-3 items-start">
+                      <span className="text-xl shrink-0 mt-0.5">
+                        {ICONS[n.type] ?? ICONS.default}
+                      </span>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm">{notification.title}</div>
-                        <div className="text-sm text-gray-600 truncate">
-                          {notification.message}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {formatDate(notification.created_at)}
-                        </div>
+                        <p className="text-sm font-medium leading-tight">{n.title}</p>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{n.message}</p>
+                        <p className="text-xs text-muted-foreground/60 mt-1">
+                          {formatDate(n.created_at)}
+                        </p>
                       </div>
-                      {!notification.is_read && (
-                        <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-2" />
+                      {!n.is_read && (
+                        <span className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2" />
                       )}
                     </div>
                   </div>
@@ -137,13 +141,15 @@ export function NotificationDropdown() {
               )}
             </div>
 
-            {notifications.length > 0 && (
-              <div className="p-3 border-t text-center">
-                <button className="text-sm text-blue-600 hover:text-blue-700">
-                  View all notifications
-                </button>
-              </div>
-            )}
+            {/* Footer */}
+            <div className="px-4 py-3 border-t border-border text-center">
+              <button
+                onClick={() => { setIsOpen(false); router.push(ROUTES.NOTIFICATIONS); }}
+                className="text-sm text-primary hover:underline"
+              >
+                View all notifications
+              </button>
+            </div>
           </div>
         </>
       )}

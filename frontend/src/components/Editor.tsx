@@ -5,7 +5,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface EditorProps {
   content: string;
@@ -17,7 +17,11 @@ export function Editor({ content, onChange, placeholder = 'Start writing...' }: 
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        // Disable Link in StarterKit (TipTap v3 includes it) to avoid duplicate extension warning
+        // @ts-ignore – StarterKit v3 exposes link configuration
+        link: false,
+      }),
       Placeholder.configure({
         placeholder,
       }),
@@ -32,17 +36,24 @@ export function Editor({ content, onChange, placeholder = 'Start writing...' }: 
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-lg max-w-none focus:outline-none min-h-[500px] px-4 py-3',
+        class: 'prose prose-lg dark:prose-invert max-w-none focus:outline-none min-h-[500px] px-4 py-3 text-foreground',
       },
     },
   });
+
+  // Sync external content changes (e.g. AI generation) into Tiptap
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content, { emitUpdate: false });
+    }
+  }, [content, editor]);
 
   if (!editor) {
     return null;
   }
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="border rounded-lg overflow-hidden bg-background">
       <EditorToolbar editor={editor} />
       <EditorContent editor={editor} />
     </div>
@@ -69,96 +80,96 @@ function EditorToolbar({ editor }: { editor: any }) {
   };
 
   return (
-    <div className="border-b bg-gray-50 p-2 flex flex-wrap gap-1">
+    <div className="border-b bg-muted/50 p-2 flex flex-wrap gap-1">
       <button
         onClick={() => editor.chain().focus().toggleBold().run()}
-        className={`px-3 py-1.5 rounded hover:bg-gray-200 ${editor.isActive('bold') ? 'bg-gray-300' : ''}`}
+        className={`px-3 py-1.5 rounded text-foreground hover:bg-accent ${editor.isActive('bold') ? 'bg-accent' : ''}`}
         type="button"
       >
         <strong>B</strong>
       </button>
       <button
         onClick={() => editor.chain().focus().toggleItalic().run()}
-        className={`px-3 py-1.5 rounded hover:bg-gray-200 ${editor.isActive('italic') ? 'bg-gray-300' : ''}`}
+        className={`px-3 py-1.5 rounded text-foreground hover:bg-accent ${editor.isActive('italic') ? 'bg-accent' : ''}`}
         type="button"
       >
         <em>I</em>
       </button>
       <button
         onClick={() => editor.chain().focus().toggleStrike().run()}
-        className={`px-3 py-1.5 rounded hover:bg-gray-200 ${editor.isActive('strike') ? 'bg-gray-300' : ''}`}
+        className={`px-3 py-1.5 rounded text-foreground hover:bg-accent ${editor.isActive('strike') ? 'bg-accent' : ''}`}
         type="button"
       >
         <s>S</s>
       </button>
       
-      <div className="w-px bg-gray-300 mx-1" />
+      <div className="w-px bg-border mx-1" />
 
       <button
         onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-        className={`px-3 py-1.5 rounded hover:bg-gray-200 ${editor.isActive('heading', { level: 1 }) ? 'bg-gray-300' : ''}`}
+        className={`px-3 py-1.5 rounded text-foreground hover:bg-accent ${editor.isActive('heading', { level: 1 }) ? 'bg-accent' : ''}`}
         type="button"
       >
         H1
       </button>
       <button
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        className={`px-3 py-1.5 rounded hover:bg-gray-200 ${editor.isActive('heading', { level: 2 }) ? 'bg-gray-300' : ''}`}
+        className={`px-3 py-1.5 rounded text-foreground hover:bg-accent ${editor.isActive('heading', { level: 2 }) ? 'bg-accent' : ''}`}
         type="button"
       >
         H2
       </button>
       <button
         onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-        className={`px-3 py-1.5 rounded hover:bg-gray-200 ${editor.isActive('heading', { level: 3 }) ? 'bg-gray-300' : ''}`}
+        className={`px-3 py-1.5 rounded text-foreground hover:bg-accent ${editor.isActive('heading', { level: 3 }) ? 'bg-accent' : ''}`}
         type="button"
       >
         H3
       </button>
 
-      <div className="w-px bg-gray-300 mx-1" />
+      <div className="w-px bg-border mx-1" />
 
       <button
         onClick={() => editor.chain().focus().toggleBulletList().run()}
-        className={`px-3 py-1.5 rounded hover:bg-gray-200 ${editor.isActive('bulletList') ? 'bg-gray-300' : ''}`}
+        className={`px-3 py-1.5 rounded text-foreground hover:bg-accent ${editor.isActive('bulletList') ? 'bg-accent' : ''}`}
         type="button"
       >
         • List
       </button>
       <button
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        className={`px-3 py-1.5 rounded hover:bg-gray-200 ${editor.isActive('orderedList') ? 'bg-gray-300' : ''}`}
+        className={`px-3 py-1.5 rounded text-foreground hover:bg-accent ${editor.isActive('orderedList') ? 'bg-accent' : ''}`}
         type="button"
       >
         1. List
       </button>
       <button
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        className={`px-3 py-1.5 rounded hover:bg-gray-200 ${editor.isActive('blockquote') ? 'bg-gray-300' : ''}`}
+        className={`px-3 py-1.5 rounded text-foreground hover:bg-accent ${editor.isActive('blockquote') ? 'bg-accent' : ''}`}
         type="button"
       >
         Quote
       </button>
       <button
         onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-        className={`px-3 py-1.5 rounded hover:bg-gray-200 ${editor.isActive('codeBlock') ? 'bg-gray-300' : ''}`}
+        className={`px-3 py-1.5 rounded text-foreground hover:bg-accent ${editor.isActive('codeBlock') ? 'bg-accent' : ''}`}
         type="button"
       >
         Code
       </button>
 
-      <div className="w-px bg-gray-300 mx-1" />
+      <div className="w-px bg-border mx-1" />
 
       <button
         onClick={() => setShowLinkInput(!showLinkInput)}
-        className={`px-3 py-1.5 rounded hover:bg-gray-200 ${editor.isActive('link') ? 'bg-gray-300' : ''}`}
+        className={`px-3 py-1.5 rounded text-foreground hover:bg-accent ${editor.isActive('link') ? 'bg-accent' : ''}`}
         type="button"
       >
         Link
       </button>
       <button
         onClick={addImage}
-        className="px-3 py-1.5 rounded hover:bg-gray-200"
+        className="px-3 py-1.5 rounded text-foreground hover:bg-accent"
         type="button"
       >
         Image
@@ -171,7 +182,7 @@ function EditorToolbar({ editor }: { editor: any }) {
             value={linkUrl}
             onChange={(e) => setLinkUrl(e.target.value)}
             placeholder="https://example.com"
-            className="px-2 py-1 border rounded text-sm"
+            className="px-2 py-1 border rounded text-sm bg-background text-foreground border-input"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
@@ -181,7 +192,7 @@ function EditorToolbar({ editor }: { editor: any }) {
           />
           <button
             onClick={setLink}
-            className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+            className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90"
             type="button"
           >
             Add

@@ -18,11 +18,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { APP_NAME, ROUTES } from '@/utils/constants';
+import { API_URL, APP_NAME, ROUTES } from '@/utils/constants';
 import { getErrorMessage } from '@/utils/helpers';
+import { toast } from 'gooey-toast';
 
 export default function SignInPage() {
   const router = useRouter();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState<string | null>(null);
   const { mutate: login, isPending } = useLogin();
 
@@ -38,17 +40,19 @@ export default function SignInPage() {
     setError(null);
     login(data, {
       onSuccess: () => {
+        toast.success({ title: 'Welcome back!', description: 'You have been signed in successfully.' });
         router.push(ROUTES.DASHBOARD);
       },
       onError: (err) => {
-        setError(getErrorMessage(err));
+        const message = getErrorMessage(err);
+        setError(message);
+        toast.error({ title: 'Sign in failed', description: message });
       },
     });
   };
 
   const handleGoogleSignIn = () => {
-    // TODO: Implement Google OAuth
-    console.log('Google Sign In');
+    window.location.href = `${API_URL}/api/auth/google`;
   };
 
   return (

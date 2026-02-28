@@ -78,10 +78,29 @@ export function useSearchBlogs(query: string, page = 1) {
   });
 }
 
+// Get my own blogs (all statuses — requires auth)
+export function useMyBlogs(page = 1) {
+  return useQuery({
+    queryKey: [QUERY_KEYS.BLOGS, 'mine', page],
+    queryFn: () => blogApi.getMyBlogs(page),
+    staleTime: 0, // always fresh so newly created blogs appear immediately
+  });
+}
+
 // Get trending blogs
 export function useTrendingBlogs() {
   return useQuery({
     queryKey: [QUERY_KEYS.TRENDING],
     queryFn: () => blogApi.getTrending(),
+  });
+}
+
+// Get personalised recommended feed
+export function useRecommendedFeed() {
+  return useQuery({
+    queryKey: [QUERY_KEYS.FEED, 'recommended'],
+    queryFn: () => blogApi.getRecommendedFeed(),
+    // Fall through gracefully if recommendation service is down
+    retry: 1,
   });
 }

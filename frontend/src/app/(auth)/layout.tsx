@@ -1,9 +1,10 @@
-import React from 'react'
+'use client';
 
-const Layout = ({ children } : { children: React.ReactNode }) => {
-  return (
-    <div>{children}</div>
-  )
-}
+import React from 'react';
+import { PublicRoute } from '@/components/PublicRoute';
 
-export default Layout
+const Layout = ({ children }: { children: React.ReactNode }) => {
+  return <PublicRoute>{children}</PublicRoute>;
+};
+
+export default Layout;

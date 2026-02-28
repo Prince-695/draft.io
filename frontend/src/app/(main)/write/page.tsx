@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { marked } from 'marked';
 import { Editor } from '@/components/Editor';
 import { AIToolbar } from '@/components/AIToolbar';
 import { ROUTES } from '@/utils/constants';
@@ -11,15 +12,20 @@ import {
   useGrammarCheck, 
   useSEOSuggestions 
 } from '@/hooks/useAI';
+import { useCreateBlog, usePublishBlog, useUpdateBlog } from '@/hooks/useBlog';
+import { blogApi } from '@/lib/api';
 import { getErrorMessage } from '@/utils/helpers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, X } from 'lucide-react';
+import { ArrowLeft, X, Cloud, CloudOff, Loader2 } from 'lucide-react';
 
-export default function WritePage() {
+function WritePageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('edit');
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -27,6 +33,7 @@ export default function WritePage() {
   const [coverImage, setCoverImage] = useState('');
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
   const [error, setError] = useState<string | null>(null);
+  const [isLoadingBlog, setIsLoadingBlog] = useState(!!editId);
 
   // AI hooks
   const { mutate: generateContent, isPending: isGenerating } = useGenerateContent();
@@ -34,21 +41,131 @@ export default function WritePage() {
   const { mutate: checkGrammar, isPending: isCheckingGrammar } = useGrammarCheck();
   const { mutate: getSEO, isPending: isGettingSEO } = useSEOSuggestions();
 
+  // Blog mutation hooks
+  const createBlogMutation = useCreateBlog();
+  const publishBlogMutation = usePublishBlog();
+  const updateBlogMutation = useUpdateBlog();
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedBlogId, setSavedBlogId] = useState<string | null>(editId); // tracks autosaved draft id
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load existing blog when in edit mode
+  useEffect(() => {
+    if (!editId) return;
+    setIsLoadingBlog(true);
+    blogApi.getBlogById(editId)
+      .then((res) => {
+        const blog = (res as any)?.data ?? res;
+        if (blog) {
+          setTitle(blog.title ?? '');
+          setContent(blog.content ?? '');
+          setCoverImage(blog.cover_image_url ?? '');
+          setStatus(blog.status ?? 'draft');
+          // Tags may be objects {id, name} or plain strings
+          if (Array.isArray(blog.tags)) {
+            setTags(blog.tags.map((t: any) => (typeof t === 'object' ? t.name : t)));
+          }
+        }
+      })
+      .catch((err) => {
+        setError('Failed to load blog: ' + getErrorMessage(err));
+      })
+      .finally(() => setIsLoadingBlog(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId]);
+
+  // Auto-save: 30 seconds after the last edit to title or content
+  useEffect(() => {
+    if (!title.trim() && !content.trim()) return;
+    setAutoSaveStatus('idle');
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(async () => {
+      setAutoSaveStatus('saving');
+      try {
+        if (savedBlogId) {
+          await updateBlogMutation.mutateAsync({
+            id: savedBlogId,
+            data: { title, content, tags, cover_image_url: coverImage || undefined, status: 'draft' },
+          });
+        } else if (title.trim()) {
+          const res = await createBlogMutation.mutateAsync({
+            title,
+            content,
+            tags,
+            cover_image_url: coverImage || undefined,
+            status: 'draft',
+          });
+          if (res?.data?.id) setSavedBlogId(res.data.id);
+        }
+        setAutoSaveStatus('saved');
+      } catch {
+        setAutoSaveStatus('idle');
+      }
+    }, 30_000);
+    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, content, tags, coverImage]);
+
   const aiLoading = isGenerating || isImproving || isCheckingGrammar || isGettingSEO;
 
   const handleSave = async () => {
+    if (!title.trim()) { setError('Title is required'); return; }
+    if (!content.trim()) { setError('Content is required'); return; }
+    setIsSaving(true);
+    setError(null);
     try {
-      // TODO: Call API to save blog
-      console.log({ title, content, tags, coverImage, status });
+      if (savedBlogId) {
+        await updateBlogMutation.mutateAsync({
+          id: savedBlogId,
+          data: { title, content, tags, cover_image_url: coverImage || undefined, status: 'draft' },
+        });
+      } else {
+        const res = await createBlogMutation.mutateAsync({
+          title, content, tags, cover_image_url: coverImage || undefined, status: 'draft',
+        });
+        if (res?.data?.id) setSavedBlogId(res.data.id);
+      }
+      setAutoSaveStatus('saved');
       router.push(ROUTES.DASHBOARD);
-    } catch (error) {
-      console.error('Failed to save blog:', error);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handlePublish = async () => {
-    setStatus('published');
-    await handleSave();
+    if (!title.trim()) { setError('Title is required'); return; }
+    if (!content.trim()) { setError('Content is required'); return; }
+    setIsSaving(true);
+    setError(null);
+    try {
+      let blogId = savedBlogId;
+      if (blogId) {
+        // Update the existing draft to published
+        const res = await updateBlogMutation.mutateAsync({
+          id: blogId,
+          data: { title, content, tags, cover_image_url: coverImage || undefined, status: 'published' },
+        });
+        blogId = res?.data?.id || blogId;
+      } else {
+        const res = await createBlogMutation.mutateAsync({
+          title, content, tags, cover_image_url: coverImage || undefined, status: 'published',
+        });
+        blogId = res?.data?.id ?? null;
+        if (blogId) setSavedBlogId(blogId);
+      }
+      // Explicitly publish via the publish endpoint (blog service may require it)
+      if (blogId) {
+        try { await publishBlogMutation.mutateAsync(blogId); } catch { /* already published */ }
+      }
+      router.push(ROUTES.DASHBOARD);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const addTag = () => {
@@ -74,8 +191,9 @@ export default function WritePage() {
             {
               onSuccess: (response) => {
                 if (response.data?.result) {
-                  // Append generated content to existing content
-                  setContent(content + '\n\n' + response.data.result);
+                  // Convert AI markdown to HTML before inserting into TipTap
+                  const html = marked.parse(response.data.result) as string;
+                  setContent(content + html);
                 }
               },
               onError: (err) => {
@@ -96,7 +214,8 @@ export default function WritePage() {
             {
               onSuccess: (response) => {
                 if (response.data?.result) {
-                  setContent(response.data.result);
+                  const html = marked.parse(response.data.result) as string;
+                  setContent(html);
                 }
               },
               onError: (err) => {
@@ -115,7 +234,8 @@ export default function WritePage() {
           checkGrammar(content, {
             onSuccess: (response) => {
               if (response.data?.result) {
-                setContent(response.data.result);
+                const html = marked.parse(response.data.result) as string;
+                setContent(html);
               }
             },
             onError: (err) => {
@@ -150,6 +270,17 @@ export default function WritePage() {
     }
   };
 
+  if (isLoadingBlog) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 className="w-8 h-8 animate-spin" />
+          <p className="text-sm">Loading blog…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b sticky top-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 z-10">
@@ -161,17 +292,30 @@ export default function WritePage() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3">
+            {/* Auto-save status */}
+            {autoSaveStatus === 'saving' && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Loader2 className="w-3 h-3 animate-spin" /> Saving…
+              </span>
+            )}
+            {autoSaveStatus === 'saved' && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Cloud className="w-3 h-3" /> Draft saved
+              </span>
+            )}
             <Button
               variant="outline"
               onClick={handleSave}
+              disabled={isSaving}
             >
-              Save Draft
+              {isSaving ? 'Saving...' : 'Save Draft'}
             </Button>
             <Button
               onClick={handlePublish}
+              disabled={isSaving}
             >
-              Publish
+              {isSaving ? 'Publishing...' : 'Publish'}
             </Button>
           </div>
         </div>
@@ -280,5 +424,17 @@ export default function WritePage() {
         />
       </div>
     </div>
+  );
+}
+
+export default function WritePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <WritePageInner />
+    </Suspense>
   );
 }

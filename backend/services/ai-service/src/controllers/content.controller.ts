@@ -27,6 +27,8 @@ export const generateContent = async (req: Request, res: Response) => {
     const prompt = `Write a ${tone} blog post about "${topic}". 
     The content should be approximately ${lengthMap[length]}.
     Make it engaging, informative, and well-structured with proper paragraphs.
+    Structure the content with clearly separated paragraphs, each focusing on a single idea.
+    Use **bold text** for key terms, section headers, and important points throughout.
     Do not include a title, just the main content.`;
 
     const completion = await openai.chat.completions.create({

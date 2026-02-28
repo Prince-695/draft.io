@@ -10,24 +10,25 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, MessageCircle, Eye, PenSquare, User, UserPlus, UserCheck } from 'lucide-react';
-import { useBlogs, useTrendingBlogs } from '@/hooks/useBlog';
+import { Heart, MessageCircle, Eye, PenSquare, User } from 'lucide-react';
+import { useBlogs, useMyBlogs, useRecommendedFeed } from '@/hooks/useBlog';
 import { useFollowUser, useUnfollowUser, useFollowing } from '@/hooks/useUser';
 import { userApi } from '@/lib/api/user';
+import { BlogPostCard } from '@/components/BlogPostCard';
 
 const Dashboard = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuthStore();
-  const [filter, setFilter] = useState<'all' | 'following' | 'trending'>('all');
+  const [filter, setFilter] = useState<'all' | 'following' | 'mine'>('all');
   const [page, setPage] = useState(1);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
 
   // Initialize filter from URL params
   useEffect(() => {
-    const tab = searchParams.get('tab') as 'all' | 'following' | 'trending';
-    if (tab && ['all', 'following', 'trending'].includes(tab)) {
+    const tab = searchParams.get('tab') as 'all' | 'following' | 'mine';
+    if (tab && ['all', 'following', 'mine'].includes(tab)) {
       setFilter(tab);
     }
   }, [searchParams]);
@@ -36,7 +37,8 @@ const Dashboard = () => {
   const { data: followingData } = useFollowing(user?.id || '');
   useEffect(() => {
     if (followingData?.data) {
-      const followingIds = new Set(followingData.data.map((u: any) => u.id));
+      const list: any[] = (followingData.data as any)?.following ?? followingData.data ?? [];
+      const followingIds = new Set(list.map((u: any) => u.id));
       setFollowingUsers(followingIds);
     }
   }, [followingData]);
@@ -45,14 +47,29 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchSuggestedUsers = async () => {
       try {
-        const response = await userApi.searchUsers('');
-        if (response.success && response.data) {
-          // Filter out current user and take first 3
-          const suggested = response.data
-            .filter((u: any) => u.id !== user?.id)
-            .slice(0, 3);
-          setSuggestedUsers(suggested);
+        // Try multiple common letters to get diverse suggestions
+        const queries = ['a', 'e', 'i'];
+        let allUsers: any[] = [];
+        for (const q of queries) {
+          try {
+            const response = await userApi.searchUsers(q);
+            if (response?.data && Array.isArray(response.data)) {
+              allUsers = [...allUsers, ...response.data];
+            }
+          } catch {
+            // ignore individual failures
+          }
         }
+        // Deduplicate, remove self, take first 3
+        const seen = new Set<string>();
+        const suggested = allUsers
+          .filter((u: any) => {
+            if (u.id === user?.id || seen.has(u.id)) return false;
+            seen.add(u.id);
+            return true;
+          })
+          .slice(0, 3);
+        setSuggestedUsers(suggested);
       } catch (error) {
         console.error('Failed to fetch suggested users:', error);
       }
@@ -64,7 +81,8 @@ const Dashboard = () => {
 
   // Fetch blogs based on filter
   const { data: allBlogsData, isLoading: loadingAllBlogs } = useBlogs(page, 10);
-  const { data: trendingData, isLoading: loadingTrending } = useTrendingBlogs();
+  const { data: myBlogsData, isLoading: loadingMyBlogs } = useMyBlogs(page);
+  const { data: recommendedData, isLoading: loadingRecommended } = useRecommendedFeed();
 
   // Follow/unfollow mutations
   const followMutation = useFollowUser();
@@ -72,20 +90,27 @@ const Dashboard = () => {
 
   // Get blogs based on current filter
   const getBlogs = () => {
-    if (filter === 'trending') {
-      return trendingData?.data || [];
+    if (filter === 'mine') {
+      return myBlogsData?.data?.blogs || [];
     }
     if (filter === 'following') {
-      // Filter blogs by followed users
+      // Filter blogs by followed users (client-side until a server feed API is added)
       return allBlogsData?.data?.blogs?.filter(blog => 
         blog.author?.id && followingUsers.has(blog.author.id)
       ) || [];
+    }
+    // 'all' / "For You" — use recommendation service, fall back to all blogs
+    const recommended = recommendedData?.data;
+    if (recommended && Array.isArray(recommended) && recommended.length > 0) {
+      return recommended as any[];
     }
     return allBlogsData?.data?.blogs || [];
   };
 
   const blogs = getBlogs();
-  const isLoading = filter === 'trending' ? loadingTrending : loadingAllBlogs;
+  const isLoading = filter === 'mine' ? loadingMyBlogs
+    : filter === 'all' ? (loadingRecommended && loadingAllBlogs)
+    : loadingAllBlogs;
 
   const handleFollow = async (userId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -103,7 +128,7 @@ const Dashboard = () => {
   };
 
   const handleTabChange = (value: string) => {
-    const newFilter = value as 'all' | 'following' | 'trending';
+    const newFilter = value as 'all' | 'following' | 'mine';
     setFilter(newFilter);
     setPage(1); // Reset page when changing tabs
     router.push(`${ROUTES.DASHBOARD}?tab=${value}`, { scroll: false });
@@ -128,8 +153,10 @@ const Dashboard = () => {
             <div className="text-6xl mb-4">📝</div>
             <CardTitle className="text-xl mb-2">No posts yet</CardTitle>
             <CardDescription className="mb-4">
-              {filter === 'following' 
+              {filter === 'following'
                 ? 'Start following people to see their content'
+                : filter === 'mine'
+                ? "You haven't written any blogs yet"
                 : 'Be the first to write a blog!'}
             </CardDescription>
             <Button onClick={() => router.push(ROUTES.WRITE)}>
@@ -144,79 +171,19 @@ const Dashboard = () => {
     return (
       <>
         {blogs.map((blog) => (
-          <Card
+          <BlogPostCard
             key={blog.id}
-            className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => router.push(`${ROUTES.BLOG}/${blog.slug}`)}
-          >
-            <CardContent className="p-6">
-              {/* Author */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarImage src={blog.author?.avatar_url} alt={blog.author?.full_name} />
-                    <AvatarFallback>{blog.author?.username?.charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="font-medium">{blog.author?.full_name || blog.author?.username}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {formatDate(blog.created_at)} · {calculateReadingTime(blog.content || '')} min read
-                    </div>
-                  </div>
-                </div>
-                {blog.author?.id && blog.author.id !== user?.id && (
-                  <Button
-                    size="sm"
-                    variant={followingUsers.has(blog.author.id) ? "outline" : "default"}
-                    onClick={(e) => handleFollow(blog.author.id, e)}
-                    disabled={followMutation.isPending || unfollowMutation.isPending}
-                  >
-                    {followingUsers.has(blog.author.id) ? (
-                      <><UserCheck className="w-4 h-4 mr-1" /> Following</>
-                    ) : (
-                      <><UserPlus className="w-4 h-4 mr-1" /> Follow</>
-                    )}
-                  </Button>
-                )}
-              </div>
-
-              {/* Content */}
-              <div className="mb-4">
-                <h2 className="text-2xl font-bold mb-2 hover:text-primary">
-                  {blog.title}
-                </h2>
-                <p className="text-muted-foreground line-clamp-2">{blog.excerpt}</p>
-              </div>
-
-              {/* Tags */}
-              {blog.tags && blog.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {blog.tags.slice(0, 3).map((tag) => (
-                    <Badge key={tag} variant="secondary">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
-              {/* Stats */}
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Heart className="w-4 h-4" /> {blog.likes_count || 0}
-                </span>
-                <span className="flex items-center gap-1">
-                  <MessageCircle className="w-4 h-4" /> {blog.comments_count || 0}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Eye className="w-4 h-4" /> {blog.views_count || 0}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+            blog={blog}
+            currentUserId={user?.id}
+            isFollowing={!!(blog.author?.id && followingUsers.has(blog.author.id))}
+            followPending={followMutation.isPending || unfollowMutation.isPending}
+            onFollow={handleFollow}
+            showStatus={filter === 'mine'}
+          />
         ))}
 
         {/* Load More */}
-        {filter === 'all' && blogs.length > 0 && (
+        {(filter === 'all' || filter === 'mine') && blogs.length > 0 && (
           <div className="text-center py-8">
             <Button
               variant="outline"
@@ -247,7 +214,7 @@ const Dashboard = () => {
           <TabsList>
             <TabsTrigger value="all">For You</TabsTrigger>
             <TabsTrigger value="following">Following</TabsTrigger>
-            <TabsTrigger value="trending">Trending</TabsTrigger>
+            <TabsTrigger value="mine">Your Blogs</TabsTrigger>
           </TabsList>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
@@ -261,7 +228,7 @@ const Dashboard = () => {
                 {renderBlogFeed()}
               </TabsContent>
               
-              <TabsContent value="trending" className="space-y-6 mt-0">
+              <TabsContent value="mine" className="space-y-6 mt-0">
                 {renderBlogFeed()}
               </TabsContent>
             </div>
@@ -321,7 +288,7 @@ const Dashboard = () => {
                       <div key={suggestedUser.id} className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <Avatar>
-                            <AvatarImage src={suggestedUser.avatar_url} />
+                            <AvatarImage src={suggestedUser.profile_picture_url} />
                             <AvatarFallback>{suggestedUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
                           </Avatar>
                           <div>

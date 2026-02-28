@@ -18,8 +18,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { APP_NAME, ROUTES } from '@/utils/constants';
+import { API_URL, APP_NAME, ROUTES } from '@/utils/constants';
 import { getErrorMessage } from '@/utils/helpers';
+import { toast } from 'gooey-toast';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -39,17 +40,19 @@ export default function SignUpPage() {
     const { confirmPassword, ...registerData } = data;
     signUp(registerData, {
       onSuccess: () => {
+        toast.success({ title: 'Account created!', description: 'Welcome to Draft.IO. Let\'s set up your profile.' });
         router.push(ROUTES.QUESTIONNAIRE);
       },
       onError: (err) => {
-        setError(getErrorMessage(err));
+        const message = getErrorMessage(err);
+        setError(message);
+        toast.error({ title: 'Sign up failed', description: message });
       },
     });
   };
 
   const handleGoogleSignUp = () => {
-    // TODO: Implement Google OAuth
-    console.log('Google Sign Up');
+    window.location.href = `${API_URL}/api/auth/google`;
   };
 
   return (

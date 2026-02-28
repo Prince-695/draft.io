@@ -126,7 +126,13 @@ export function debounce<T extends (...args: any[]) => any>(
  * Get error message from unknown error
  */
 export function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
+  // Extract backend error message from Axios errors
+  if (error && typeof error === 'object') {
+    const axiosError = error as { response?: { data?: { error?: string; message?: string } }; message?: string };
+    if (axiosError.response?.data?.error) return axiosError.response.data.error;
+    if (axiosError.response?.data?.message) return axiosError.response.data.message;
+    if (axiosError.message) return axiosError.message;
+  }
   if (typeof error === 'string') return error;
   return 'An unknown error occurred';
 }

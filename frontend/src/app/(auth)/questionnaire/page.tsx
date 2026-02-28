@@ -6,7 +6,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore } from '@/stores';
-import { ROUTES } from '@/utils/constants';
+import { API_ENDPOINTS, ROUTES } from '@/utils/constants';
+import apiClient from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -43,7 +44,7 @@ export default function QuestionnairePage() {
   const { updateUser } = useAuthStore();
   const [step, setStep] = useState(1);
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<QuestionnaireData>({
+  const { register, handleSubmit, watch, setValue, getValues, formState: { errors } } = useForm<QuestionnaireData>({
     resolver: zodResolver(questionnaireSchema),
     defaultValues: {
       interests: [],
@@ -77,15 +78,42 @@ export default function QuestionnairePage() {
 
   const onSubmit = async (data: QuestionnaireData) => {
     try {
-      // TODO: Call API to save preferences
+      // Combine interests and preferred_topics for the backend
+      const allInterests = [...new Set([...data.interests, ...data.preferred_topics])];
+      await apiClient.post(API_ENDPOINTS.USER.PERSONALIZE, {
+        interests: allInterests,
+        experience_level: data.writing_experience === 'professional' ? 'advanced' : data.writing_experience,
+        writing_goals: [`Reads ${data.reading_frequency}`, `Prefers ${data.blog_length} posts`],
+      });
+      // Also update local store
       updateUser({
-        interests: data.interests,
-        expertise_tags: data.preferred_topics,
+        interests: allInterests,
       });
       router.push(ROUTES.DASHBOARD);
     } catch (error) {
       console.error('Failed to save questionnaire:', error);
+      // Navigate anyway so users aren't stuck
+      router.push(ROUTES.DASHBOARD);
     }
+  };
+
+  // Bypass zod validation on final step so users are never stuck
+  const handleComplete = async () => {
+    const values = getValues();
+    try {
+      const allInterests = [...new Set([...selectedInterests, ...selectedTopics])];
+      if (allInterests.length > 0 || values.writing_experience) {
+        await apiClient.post(API_ENDPOINTS.USER.PERSONALIZE, {
+          interests: allInterests,
+          experience_level: values.writing_experience === 'professional' ? 'advanced' : values.writing_experience,
+          writing_goals: [`Reads ${values.reading_frequency}`, `Prefers ${values.blog_length} posts`],
+        });
+        updateUser({ interests: allInterests });
+      }
+    } catch (error) {
+      console.error('Failed to save questionnaire:', error);
+    }
+    router.push(ROUTES.DASHBOARD);
   };
 
   return (
@@ -165,7 +193,7 @@ export default function QuestionnairePage() {
                         <Label
                           key={option.value}
                           htmlFor={option.value}
-                          className="flex items-start p-4 border-2 rounded-lg cursor-pointer hover:bg-accent has-[:checked]:border-primary"
+                          className="flex items-start p-4 border-2 rounded-lg cursor-pointer hover:bg-accent has-checked:border-primary"
                         >
                           <RadioGroupItem value={option.value} id={option.value} className="mt-1" />
                           <div className="ml-3">
@@ -194,7 +222,7 @@ export default function QuestionnairePage() {
                           <Label
                             key={option.value}
                             htmlFor={`reading-${option.value}`}
-                            className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-accent has-[:checked]:border-primary"
+                            className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-accent has-checked:border-primary"
                           >
                             <RadioGroupItem value={option.value} id={`reading-${option.value}`} />
                             <span className="ml-3 font-medium">{option.label}</span>
@@ -217,7 +245,7 @@ export default function QuestionnairePage() {
                           <Label
                             key={option.value}
                             htmlFor={`length-${option.value}`}
-                            className="flex items-start p-4 border-2 rounded-lg cursor-pointer hover:bg-accent has-[:checked]:border-primary"
+                            className="flex items-start p-4 border-2 rounded-lg cursor-pointer hover:bg-accent has-checked:border-primary"
                           >
                             <RadioGroupItem value={option.value} id={`length-${option.value}`} className="mt-1" />
                             <div className="ml-3">
@@ -253,7 +281,8 @@ export default function QuestionnairePage() {
                   </Button>
                 ) : (
                   <Button
-                    type="submit"
+                    type="button"
+                    onClick={handleComplete}
                     className="ml-auto"
                   >
                     Complete Setup

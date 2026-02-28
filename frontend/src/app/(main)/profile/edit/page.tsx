@@ -7,13 +7,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Image from 'next/image';
 import { useAuthStore } from '@/stores';
-import { ROUTES } from '@/utils/constants';
+import { ROUTES, API_ENDPOINTS } from '@/utils/constants';
+import apiClient from '@/lib/api/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AlertCircle, Home } from 'lucide-react';
 
 const profileSchema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -30,8 +32,10 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 export default function EditProfilePage() {
   const router = useRouter();
   const { user, updateUser } = useAuthStore();
-  const [avatarPreview, setAvatarPreview] = useState(user?.avatar_url || '');
-  const [coverPreview, setCoverPreview] = useState(user?.cover_image || '');
+  const [avatarPreview, setAvatarPreview] = useState((user as any)?.avatar_url || user?.profile_picture_url || '');
+  const [coverPreview, setCoverPreview] = useState((user as any)?.cover_image || user?.cover_image_url || '');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -72,23 +76,71 @@ export default function EditProfilePage() {
 
   const onSubmit = async (data: ProfileFormData) => {
     try {
-      // TODO: Call API to update profile
+      setSaveError(null);
+      setIsSaving(true);
+      await apiClient.put(API_ENDPOINTS.USER.UPDATE_PROFILE, {
+        full_name: data.full_name,
+        bio: data.bio?.trim() || undefined,
+        location: data.location?.trim() || undefined,
+        website: data.website?.trim() || undefined,
+        // Strip leading @ from twitter handle; skip if empty
+        twitter_handle: data.twitter?.trim()
+          ? data.twitter.trim().replace(/^@/, '')
+          : undefined,
+        // Accept raw username or full URL for github/linkedin
+        github_url: data.github?.trim() || undefined,
+        linkedin_url: data.linkedin?.trim() || undefined,
+      });
       updateUser({
         full_name: data.full_name,
         bio: data.bio,
       });
-      router.push(`${ROUTES.PROFILE}/${user?.username}`);
-    } catch (error) {
+      const username = user?.username;
+      if (username) {
+        router.push(`${ROUTES.PROFILE}/${username}`);
+      } else {
+        router.push(ROUTES.DASHBOARD);
+      }
+    } catch (error: any) {
       console.error('Failed to update profile:', error);
+      const msg = error?.response?.data?.error || error?.message || 'Failed to save profile. Please try again.';
+      setSaveError(msg);
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  if (saveError && saveError.toLowerCase().includes('not found')) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <AlertCircle className="w-16 h-16 text-destructive mx-auto" />
+          <p className="text-2xl font-bold">Profile Error</p>
+          <p className="text-muted-foreground">{saveError}</p>
+          <div className="flex gap-3 justify-center">
+            <Button variant="outline" onClick={() => setSaveError(null)}>Try Again</Button>
+            <Button onClick={() => router.push(ROUTES.DASHBOARD)}>
+              <Home className="w-4 h-4 mr-2" />
+              Go to Dashboard
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background py-8">
       <div className="max-w-3xl mx-auto px-4">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Edit Profile</h1>
-          <p className="text-muted-foreground mt-1">Update your profile information</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Edit Profile</h1>
+            <p className="text-muted-foreground mt-1">Update your profile information</p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => router.push(ROUTES.DASHBOARD)}>
+            <Home className="w-4 h-4 mr-2" />
+            Dashboard
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -241,6 +293,18 @@ export default function EditProfilePage() {
             </CardContent>
           </Card>
 
+          {/* Save Error */}
+          {saveError && (
+            <div className="flex items-center gap-3 p-4 rounded-lg border border-destructive/50 bg-destructive/10">
+              <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
+              <p className="text-sm text-destructive flex-1">{saveError}</p>
+              <Button size="sm" variant="outline" onClick={() => router.push(ROUTES.DASHBOARD)}>
+                <Home className="w-4 h-4 mr-1" />
+                Dashboard
+              </Button>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex justify-end gap-3">
             <Button
@@ -250,8 +314,8 @@ export default function EditProfilePage() {
             >
               Cancel
             </Button>
-            <Button type="submit">
-              Save Changes
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </form>

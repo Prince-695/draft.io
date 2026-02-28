@@ -35,8 +35,14 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
+    // Skip token refresh for auth endpoints (login/register 401 = wrong credentials)
+    const requestUrl = originalRequest.url ?? '';
+    const isAuthEndpoint = requestUrl.includes('/api/auth/login') || 
+      requestUrl.includes('/api/auth/register') ||
+      requestUrl.includes('/api/auth/refresh');
+
     // If error is 401 and we haven't retried yet, try to refresh token
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
 
       try {
@@ -51,10 +57,16 @@ apiClient.interceptors.response.use(
 
         // Try to refresh the token
         const response = await axios.post(`${API_URL}/api/auth/refresh`, {
-          refreshToken: tokens.refreshToken,
+          refresh_token: tokens.refreshToken,
         });
 
-        const newTokens = response.data.data;
+        const rawTokens = response.data?.data ?? response.data;
+        // Preserve the existing refresh token if the server doesn't return a new one
+        const existingTokens = useAuthStore.getState().tokens;
+        const newTokens = {
+          accessToken: rawTokens.accessToken ?? rawTokens.access_token ?? '',
+          refreshToken: rawTokens.refreshToken ?? rawTokens.refresh_token ?? existingTokens?.refreshToken ?? '',
+        };
         
         // Update tokens in store
         useAuthStore.getState().setTokens(newTokens);

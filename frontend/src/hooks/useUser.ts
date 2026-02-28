@@ -74,6 +74,8 @@ export function useFollowing(userId: string) {
     queryKey: [QUERY_KEYS.USER, userId, 'following'],
     queryFn: () => userApi.getFollowing(userId),
     enabled: !!userId,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -83,5 +85,7 @@ export function useFollowers(userId: string) {
     queryKey: [QUERY_KEYS.USER, userId, 'followers'],
     queryFn: () => userApi.getFollowers(userId),
     enabled: !!userId,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 }

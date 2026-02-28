@@ -28,7 +28,7 @@ export interface RegisterData {
   email: string;
   password: string;
   username: string;
-  full_name: string;
+  full_name?: string;
 }
 
 export interface Blog {
@@ -68,6 +68,8 @@ export interface ChatMessage {
   id: string;
   sender_id: string;
   receiver_id: string;
+  conversation_id?: string;
+  conversationId?: string;
   message: string;
   read_at?: string;
   created_at: string;
@@ -81,7 +83,7 @@ export interface Notification {
   title: string;
   message: string;
   link?: string;
-  read: boolean;
+  is_read: boolean;
   created_at: string;
   actor?: User;
 }
