@@ -1,5 +1,22 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { aiApi } from '@/lib/api/ai';
+import { useUIStore } from '@/stores/uiStore';
+
+// AI monthly quota hook
+// Fetches used/limit on mount; the axios interceptor in client.ts keeps it live after every AI call
+export function useAIUsage() {
+  const setAIUsage = useUIStore((s) => s.setAIUsage);
+  return useQuery({
+    queryKey: ['ai-usage'],
+    queryFn: async () => {
+      const data = await aiApi.getUsage();
+      setAIUsage(data.used, data.limit);
+      return data;
+    },
+    staleTime: 60_000, // re-fetch at most once per minute
+    refetchOnWindowFocus: false,
+  });
+}
 
 // Generate content hook
 export function useGenerateContent() {

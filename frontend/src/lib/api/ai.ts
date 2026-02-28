@@ -107,6 +107,13 @@ export const aiApi = {
     };
   },
 
+  // Get current monthly AI usage for the logged-in user (does not consume a request)
+  getUsage: async (): Promise<{ used: number; limit: number; remaining: number }> => {
+    const response = await apiClient.get('/api/ai/usage');
+    const { used, limit, remaining } = response.data?.data ?? { used: 0, limit: 10, remaining: 10 };
+    return { used, limit, remaining };
+  },
+
   // Get SEO suggestions
   // Backend expects { content, targetKeywords? } — we combine title + content
   getSEOSuggestions: async (data: {

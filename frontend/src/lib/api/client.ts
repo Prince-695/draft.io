@@ -30,6 +30,15 @@ apiClient.interceptors.request.use(
 // Response interceptor - Handle token refresh and errors
 apiClient.interceptors.response.use(
   (response) => {
+    // Auto-update the AI usage counter whenever a backend AI call returns quota headers
+    const used = response.headers['x-ai-requests-used'];
+    const limit = response.headers['x-ai-requests-limit'];
+    if (used !== undefined && limit !== undefined) {
+      // Lazy-import to avoid circular deps — Zustand store is a module singleton
+      import('@/stores/uiStore').then(({ useUIStore }) => {
+        useUIStore.getState().setAIUsage(parseInt(used, 10), parseInt(limit, 10));
+      });
+    }
     return response;
   },
   async (error: AxiosError) => {

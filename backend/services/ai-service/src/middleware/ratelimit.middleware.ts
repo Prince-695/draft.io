@@ -54,21 +54,23 @@ export const rateLimiter = async (req: AuthRequest, res: Response, next: NextFun
   }
 };
 
-// Track AI usage for analytics
-export const trackUsage = async (req: AuthRequest, res: Response, next: NextFunction) => {
+/** GET /api/ai/usage — returns the current user's monthly AI request count without consuming a request */
+export const getUsageHandler = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const endpoint = req.path;
-
-    if (userId) {
-      const key = `ai:usage:${userId}:${new Date().toISOString().split('T')[0]}`;
-      await redisClient.hIncrBy(key, endpoint, 1);
-      await redisClient.expire(key, 86400 * 30); // Keep for 30 days
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User authentication required' });
     }
 
-    next();
+    const raw = await redisClient.get(monthlyKey(userId));
+    const used = raw ? parseInt(raw, 10) : 0;
+
+    return res.json({
+      success: true,
+      data: { used, limit: MONTHLY_LIMIT, remaining: MONTHLY_LIMIT - used },
+    });
   } catch (error) {
-    console.error('Usage tracking error:', error);
-    next();
+    console.error('Usage fetch error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to fetch usage' });
   }
 };

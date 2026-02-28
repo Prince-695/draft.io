@@ -78,6 +78,7 @@ export const API_ENDPOINTS = {
     IMPROVE: '/api/ai/improve/content',
     SEO: '/api/ai/seo/suggestions',
     SUMMARIZE: '/api/ai/summarize',
+    USAGE: '/api/ai/usage',
   },
   CHAT: {
     CONVERSATIONS: '/api/chat/conversations',

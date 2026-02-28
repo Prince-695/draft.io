@@ -26,6 +26,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useAIUsage } from '@/hooks/useAI';
+import { useUIStore } from '@/stores/uiStore';
 
 interface AIToolbarProps {
   onGenerate: (prompt: string, type: 'generate' | 'improve' | 'grammar' | 'seo') => void;
@@ -37,6 +39,14 @@ export function AIToolbar({ onGenerate, isLoading = false }: AIToolbarProps) {
   const [prompt, setPrompt] = useState('');
   // Instruction for Improve / Grammar / quick-action dropdown items
   const [instruction, setInstruction] = useState('');
+
+  // AI quota — fetched on mount, auto-updated by axios interceptor after each call
+  useAIUsage();
+  const aiUsed = useUIStore((s) => s.aiRequestsUsed);
+  const aiLimit = useUIStore((s) => s.aiRequestsLimit);
+  const aiRemaining = aiLimit - aiUsed;
+  const usagePct = Math.min((aiUsed / aiLimit) * 100, 100);
+  const usageColor = aiUsed >= aiLimit ? 'bg-red-500' : aiUsed >= aiLimit * 0.7 ? 'bg-yellow-500' : 'bg-green-500';
 
   const handleGenerate = () => {
     if (prompt.trim()) {
@@ -76,7 +86,7 @@ export function AIToolbar({ onGenerate, isLoading = false }: AIToolbarProps) {
           variant="outline"
           size="sm"
           onClick={() => setShowPromptDialog(true)}
-          disabled={isLoading}
+          disabled={isLoading || aiRemaining <= 0}
           className="gap-2"
         >
           {isLoading ? (
@@ -92,7 +102,7 @@ export function AIToolbar({ onGenerate, isLoading = false }: AIToolbarProps) {
           variant="outline"
           size="sm"
           onClick={() => handleQuickAction('', 'improve')}
-          disabled={isLoading}
+          disabled={isLoading || aiRemaining <= 0}
           className="gap-2"
         >
           <FileEdit className="w-4 h-4" />
@@ -104,7 +114,7 @@ export function AIToolbar({ onGenerate, isLoading = false }: AIToolbarProps) {
           variant="outline"
           size="sm"
           onClick={() => handleQuickAction('', 'grammar')}
-          disabled={isLoading}
+          disabled={isLoading || aiRemaining <= 0}
           className="gap-2"
         >
           <CheckCircle className="w-4 h-4" />
@@ -116,7 +126,7 @@ export function AIToolbar({ onGenerate, isLoading = false }: AIToolbarProps) {
           variant="outline"
           size="sm"
           onClick={() => onGenerate('', 'seo')}
-          disabled={isLoading}
+          disabled={isLoading || aiRemaining <= 0}
           className="gap-2"
         >
           <Target className="w-4 h-4" />
@@ -126,7 +136,7 @@ export function AIToolbar({ onGenerate, isLoading = false }: AIToolbarProps) {
         {/* More Options Dropdown — each item passes a preset instruction */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" disabled={isLoading}>
+            <Button variant="ghost" size="sm" disabled={isLoading || aiRemaining <= 0}>
               <ChevronDown className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -154,6 +164,26 @@ export function AIToolbar({ onGenerate, isLoading = false }: AIToolbarProps) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* AI usage indicator — always visible on the right side of the toolbar */}
+        <div className="ml-auto flex items-center gap-2 min-w-[140px]">
+          <div className="flex flex-col gap-0.5 w-full">
+            <div className="flex justify-between items-center">
+              <span className={`text-xs font-medium ${
+                aiRemaining === 0 ? 'text-red-500' : aiUsed >= aiLimit * 0.7 ? 'text-yellow-500' : 'text-muted-foreground'
+              }`}>
+                {aiRemaining === 0 ? 'No AI requests left' : `${aiRemaining} / ${aiLimit} AI requests left`}
+              </span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${usageColor}`}
+                style={{ width: `${usagePct}%` }}
+              />
+            </div>
+            <span className="text-[10px] text-muted-foreground">Resets on the 1st of each month</span>
+          </div>
+        </div>
       </div>
 
       {/* Generate Content Dialog */}
