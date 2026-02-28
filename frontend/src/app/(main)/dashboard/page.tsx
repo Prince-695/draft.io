@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, MessageCircle, Eye, PenSquare, User } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Heart, MessageCircle, Eye, PenSquare, User, Sparkles, X } from 'lucide-react';
 import { useBlogs, useMyBlogs, useRecommendedFeed } from '@/hooks/useBlog';
 import { useFollowUser, useUnfollowUser, useFollowing } from '@/hooks/useUser';
 import { userApi } from '@/lib/api/user';
@@ -24,6 +25,7 @@ const Dashboard = () => {
   const [page, setPage] = useState(1);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
+  const [showAllInterests, setShowAllInterests] = useState(false);
 
   // Initialize filter from URL params
   useEffect(() => {
@@ -261,6 +263,83 @@ const Dashboard = () => {
                   </Button>
                 </CardContent>
               </Card>
+
+              {/* Your Interests */}
+              {user?.interests && user.interests.length > 0 && (
+                <>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-primary" />
+                        Your Interests
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Topics guiding your feed
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                        {user.interests.slice(0, 3).map((interest) => (
+                          <Badge
+                            key={interest}
+                            variant="secondary"
+                            className="cursor-default"
+                          >
+                            {interest}
+                          </Badge>
+                        ))}
+                        {user.interests.length > 3 && (
+                          <Badge
+                            variant="outline"
+                            className="cursor-pointer hover:bg-accent transition-colors"
+                            onClick={() => setShowAllInterests(true)}
+                          >
+                            +{user.interests.length - 3} more
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* All Interests Modal */}
+                  <Dialog open={showAllInterests} onOpenChange={setShowAllInterests}>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Sparkles className="w-5 h-5 text-primary" />
+                          All Your Interests
+                        </DialogTitle>
+                      </DialogHeader>
+                      <p className="text-sm text-muted-foreground -mt-1">
+                        These are the topics you selected during sign-up. They shape your personalised feed.
+                      </p>
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        {user.interests.map((interest) => (
+                          <Badge
+                            key={interest}
+                            variant="secondary"
+                            className="text-sm py-1 px-3"
+                          >
+                            {interest}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="pt-2 flex justify-between items-center">
+                        <p className="text-xs text-muted-foreground">
+                          {user.interests.length} interest{user.interests.length !== 1 ? 's' : ''} selected
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(ROUTES.PROFILE_EDIT)}
+                        >
+                          Edit Interests
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </>
+              )}
 
               {/* Trending Tags */}
               <Card>
