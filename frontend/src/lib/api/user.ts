@@ -53,6 +53,12 @@ export const userApi = {
     return raw;
   },
 
+  // Get user profile by ID
+  getUserById: async (userId: string): Promise<ApiResponse<User>> => {
+    const response = await apiClient.get(`${API_ENDPOINTS.USER.GET_BY_ID}/${userId}`);
+    return response.data;
+  },
+
   // Follow user
   follow: async (userId: string): Promise<ApiResponse> => {
     const response = await apiClient.post(`${API_ENDPOINTS.USER.FOLLOW}/${userId}`);

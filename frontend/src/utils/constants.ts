@@ -40,6 +40,7 @@ export const API_ENDPOINTS = {
   },
   USER: {
     PROFILE: '/api/users/profile',
+    GET_BY_ID: '/api/users/profile/id',
     UPDATE_PROFILE: '/api/users/profile',
     PERSONALIZE: '/api/users/profile/personalize',
     UPLOAD_AVATAR: '/api/users/profile/avatar',
