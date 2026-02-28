@@ -271,7 +271,8 @@ export default function PublicFeedPage() {
 function BlogCard({ blog }: { blog: Blog }) {
   const router = useRouter();
 
-  function truncate(text: string, maxLen: number) {
+  function truncate(text: string | undefined | null, maxLen: number) {
+    if (!text) return '';
     const plain = text.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
     return plain.length > maxLen ? plain.slice(0, maxLen) + '…' : plain;
   }
