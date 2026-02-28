@@ -34,8 +34,8 @@ export const initializeSocketHandlers = (io: Server) => {
     }
 
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-      socket.userId = decoded.userId;
+      const decoded = jwt.verify(token, JWT_SECRET) as { user_id: string; userId?: string };
+      socket.userId = decoded.user_id ?? decoded.userId;
       next();
     } catch (error) {
       next(new Error('Authentication error: Invalid token'));

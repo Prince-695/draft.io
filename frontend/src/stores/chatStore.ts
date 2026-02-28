@@ -50,9 +50,22 @@ export const useChatStore = create<ChatStore>()((set) => ({
   setMessages: (messages) => set({ messages }),
 
   addMessage: (message) =>
-    set((state) => ({
-      messages: [...state.messages, message],
-    })),
+    set((state) => {
+      // Deduplicate: skip if we already have a message with the same non-empty id
+      if (message.id && state.messages.some((m) => m.id === message.id)) {
+        return state;
+      }
+      // Also update conversation sidebar lastMessage
+      const updatedConversations = state.conversations.map((conv) => {
+        const isThisConv =
+          conv.user.id === message.sender_id || conv.user.id === message.receiver_id;
+        return isThisConv ? { ...conv, lastMessage: message } : conv;
+      });
+      return {
+        messages: [...state.messages, message],
+        conversations: updatedConversations,
+      };
+    }),
 
   updateMessage: (messageId, updates) =>
     set((state) => ({

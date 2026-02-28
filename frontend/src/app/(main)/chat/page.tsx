@@ -15,6 +15,16 @@ import { io, Socket } from 'socket.io-client';
 // Chat service runs on port 5007 — separate from the notification service (5006)
 const CHAT_WS_URL = process.env.NEXT_PUBLIC_CHAT_WS_URL || 'http://localhost:5007';
 
+// Stable pure helper — defined outside component so socket callbacks never have stale closure
+const normalizeMessage = (msg: any) => ({
+  id: msg._id?.toString() ?? msg.id ?? '',
+  sender_id: msg.senderId ?? msg.sender_id ?? '',
+  receiver_id: msg.receiverId ?? msg.receiver_id ?? '',
+  conversation_id: msg.conversationId ?? msg.conversation_id ?? '',
+  message: msg.content ?? msg.message ?? '',
+  created_at: msg.createdAt ?? msg.created_at ?? new Date().toISOString(),
+});
+
 export default function ChatPage() {
   const { user } = useAuthStore();
   const { conversations, messages, onlineUsers, addMessage, addOnlineUser, removeOnlineUser, addTypingUser, removeTypingUser, setConversations, setMessages } = useChatStore();
@@ -42,15 +52,7 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Normalize backend camelCase → ChatMessage snake_case type
-  const normalizeMessage = (msg: any) => ({
-    id: msg._id?.toString() ?? msg.id ?? '',
-    sender_id: msg.senderId,
-    receiver_id: msg.receiverId,
-    conversation_id: msg.conversationId,
-    message: msg.content,
-    created_at: msg.createdAt ?? new Date().toISOString(),
-  });
+  // Normalize backend camelCase → ChatMessage snake_case type — now a module-level function
 
   useEffect(() => {
     const token = useAuthStore.getState().tokens?.accessToken;
@@ -71,30 +73,12 @@ export default function ChatPage() {
 
     // Backend emits 'receive_message' to the receiver
     socket.on('receive_message', (message: any) => {
-      const normalized = normalizeMessage(message);
-      addMessage(normalized);
-      // Update conversation sidebar lastMessage
-      useChatStore.setState((state) => ({
-        conversations: state.conversations.map((conv) =>
-          conv.user.id === normalized.sender_id
-            ? { ...conv, lastMessage: normalized }
-            : conv
-        ),
-      }));
+      addMessage(normalizeMessage(message));
     });
 
     // Backend emits 'message_sent' back to the sender as confirmation
     socket.on('message_sent', (message: any) => {
-      const normalized = normalizeMessage(message);
-      addMessage(normalized);
-      // Update conversation sidebar lastMessage
-      useChatStore.setState((state) => ({
-        conversations: state.conversations.map((conv) =>
-          conv.user.id === normalized.receiver_id
-            ? { ...conv, lastMessage: normalized }
-            : conv
-        ),
-      }));
+      addMessage(normalizeMessage(message));
     });
 
     // Backend broadcasts 'user_online' with { userId } when a user connects
@@ -253,11 +237,11 @@ export default function ChatPage() {
     }
   };
 
-  // Filter messages for the active conversation by sender/receiver
-  const conversationMessages = selectedConversation
+  // Filter messages for this conversation: only msgs between me and the selected user
+  const conversationMessages = selectedConversation && user?.id
     ? messages.filter((m) =>
-        m.sender_id === selectedConversation ||
-        m.receiver_id === selectedConversation
+        (m.sender_id === user.id && m.receiver_id === selectedConversation) ||
+        (m.sender_id === selectedConversation && m.receiver_id === user.id)
       )
     : [];
 
@@ -403,7 +387,7 @@ export default function ChatPage() {
             </div>
 
             {/* Messages — scrollable area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {conversationMessages.length === 0 && (
                 <div className="text-center text-muted-foreground text-sm py-8">
                   No messages yet. Say hi! 👋
@@ -413,20 +397,39 @@ export default function ChatPage() {
                 const isOwn = message.sender_id === user?.id;
                 return (
                   <div
-                    key={message.id}
-                    className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                    key={message.id || Math.random()}
+                    className={`flex items-end gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
                   >
+                    {/* Avatar */}
+                    <Avatar className="w-7 h-7 shrink-0 mb-0.5">
+                      {isOwn ? (
+                        <>
+                          <AvatarImage src={user?.profile_picture_url ?? undefined} />
+                          <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                            {(user?.full_name || user?.username || 'Me').charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </>
+                      ) : (
+                        <>
+                          <AvatarImage src={activeUser?.profile_picture_url ?? undefined} />
+                          <AvatarFallback className="text-xs">
+                            {(activeUser?.full_name || activeUser?.username || '?').charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </>
+                      )}
+                    </Avatar>
+                    {/* Bubble */}
                     <div
-                      className={`max-w-sm lg:max-w-md px-4 py-2.5 rounded-2xl ${
+                      className={`max-w-xs lg:max-w-md px-3.5 py-2.5 rounded-2xl ${
                         isOwn
                           ? 'bg-primary text-primary-foreground rounded-br-sm'
-                          : 'bg-card border rounded-bl-sm'
+                          : 'bg-muted rounded-bl-sm'
                       }`}
                     >
-                      <div className="text-sm leading-relaxed">{message.message}</div>
+                      <div className="text-sm leading-relaxed break-words">{message.message}</div>
                       <div
-                        className={`text-xs mt-1 ${
-                          isOwn ? 'text-primary-foreground/60' : 'text-muted-foreground'
+                        className={`text-[10px] mt-0.5 ${
+                          isOwn ? 'text-primary-foreground/60 text-right' : 'text-muted-foreground'
                         }`}
                       >
                         {message.created_at ? formatDate(message.created_at) : ''}
