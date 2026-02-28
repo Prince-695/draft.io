@@ -6,11 +6,20 @@ class SocketService {
   private socket: Socket | null = null;
 
   connect(token: string) {
-    if (this.socket?.connected) return this.socket;
+    // Reuse if already connected OR still in the process of connecting.
+    // Tearing down a connecting socket causes "WebSocket closed before established".
+    if (this.socket) return this.socket;
 
     this.socket = io(WS_URL, {
       auth: { token },
-      transports: ['websocket'],
+      // Use polling first (default), then upgrade to WebSocket.
+      // Forcing 'websocket' only skips the HTTP handshake and causes
+      // "WebSocket is closed before connection is established" errors.
+      transports: ['polling', 'websocket'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      timeout: 10000,
     });
 
     this.socket.on('connect', () => {
@@ -21,8 +30,8 @@ class SocketService {
       console.log('WebSocket disconnected');
     });
 
-    this.socket.on('error', (error) => {
-      console.error('WebSocket error:', error);
+    this.socket.on('connect_error', (error) => {
+      console.warn('WebSocket connect error:', error.message);
     });
 
     return this.socket;

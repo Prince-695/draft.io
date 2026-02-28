@@ -27,7 +27,7 @@ export const useAuthStore = create<AuthStore>()(
       user: null,
       tokens: null,
       isAuthenticated: false,
-      isLoading: false,
+      isLoading: true, // true until AuthInitializer verifies/clears the session
 
       // Actions
       setUser: (user) => set({ user, isAuthenticated: !!user }),
