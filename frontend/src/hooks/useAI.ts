@@ -26,15 +26,22 @@ export function useGenerateOutline() {
 // Grammar check hook
 export function useGrammarCheck() {
   return useMutation({
-    mutationFn: (content: string) => aiApi.checkGrammar({ content }),
+    mutationFn: (data: {
+      content: string;
+      instructions?: string;
+      conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
+    }) => aiApi.checkGrammar(data),
   });
 }
 
 // Improve content hook
 export function useImproveContent() {
   return useMutation({
-    mutationFn: (data: { content: string; instructions?: string }) =>
-      aiApi.improveContent(data),
+    mutationFn: (data: {
+      content: string;
+      instructions?: string;
+      conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
+    }) => aiApi.improveContent(data),
   });
 }
 

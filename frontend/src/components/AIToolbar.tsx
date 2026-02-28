@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { 
   Sparkles, 
   FileEdit, 
@@ -34,6 +35,8 @@ interface AIToolbarProps {
 export function AIToolbar({ onGenerate, isLoading = false }: AIToolbarProps) {
   const [showPromptDialog, setShowPromptDialog] = useState(false);
   const [prompt, setPrompt] = useState('');
+  // Instruction for Improve / Grammar / quick-action dropdown items
+  const [instruction, setInstruction] = useState('');
 
   const handleGenerate = () => {
     if (prompt.trim()) {
@@ -43,11 +46,31 @@ export function AIToolbar({ onGenerate, isLoading = false }: AIToolbarProps) {
     }
   };
 
+  const handleQuickAction = (preset: string, type: 'improve' | 'grammar') => {
+    // preset from dropdown items; falls back to the free-text instruction box
+    onGenerate(preset || instruction, type);
+    setInstruction('');
+  };
+
   return (
     <>
-      <div className="flex items-center gap-2 p-3 border-b border-border bg-muted/30">
-        <span className="text-sm font-medium text-muted-foreground mr-2">AI Tools:</span>
-        
+      <div className="flex items-center gap-2 p-3 border-b border-border bg-muted/30 flex-wrap">
+        <span className="text-sm font-medium text-muted-foreground mr-1">AI Tools:</span>
+
+        {/* Optional custom instruction — used by Improve & Grammar buttons */}
+        <Input
+          value={instruction}
+          onChange={(e) => setInstruction(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && instruction.trim()) {
+              handleQuickAction(instruction, 'improve');
+            }
+          }}
+          placeholder="Optional instruction… e.g. add emojis"
+          className="h-8 w-52 text-sm"
+          disabled={isLoading}
+        />
+
         {/* Generate Content Button */}
         <Button
           variant="outline"
@@ -68,7 +91,7 @@ export function AIToolbar({ onGenerate, isLoading = false }: AIToolbarProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => onGenerate('', 'improve')}
+          onClick={() => handleQuickAction('', 'improve')}
           disabled={isLoading}
           className="gap-2"
         >
@@ -80,7 +103,7 @@ export function AIToolbar({ onGenerate, isLoading = false }: AIToolbarProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => onGenerate('', 'grammar')}
+          onClick={() => handleQuickAction('', 'grammar')}
           disabled={isLoading}
           className="gap-2"
         >
@@ -100,7 +123,7 @@ export function AIToolbar({ onGenerate, isLoading = false }: AIToolbarProps) {
           SEO
         </Button>
 
-        {/* More Options Dropdown */}
+        {/* More Options Dropdown — each item passes a preset instruction */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" disabled={isLoading}>
@@ -108,26 +131,26 @@ export function AIToolbar({ onGenerate, isLoading = false }: AIToolbarProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={() => onGenerate('', 'improve')}>
+            <DropdownMenuItem onClick={() => handleQuickAction('Make it more professional', 'improve')}>
               <FileEdit className="w-4 h-4 mr-2" />
               Make it more professional
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onGenerate('', 'improve')}>
+            <DropdownMenuItem onClick={() => handleQuickAction('Make it shorter', 'improve')}>
               <FileEdit className="w-4 h-4 mr-2" />
               Make it shorter
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onGenerate('', 'improve')}>
+            <DropdownMenuItem onClick={() => handleQuickAction('Make it longer with more detail', 'improve')}>
               <FileEdit className="w-4 h-4 mr-2" />
               Make it longer
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onGenerate('', 'improve')}>
+            <DropdownMenuItem onClick={() => handleQuickAction('Add emojis throughout the content where appropriate', 'improve')}>
               <Sparkles className="w-4 h-4 mr-2" />
               Add emojis
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onGenerate('', 'improve')}>
+            <DropdownMenuItem onClick={() => handleQuickAction('Make the tone more conversational and friendly', 'improve')}>
               <Sparkles className="w-4 h-4 mr-2" />
-              Change tone
+              Make tone conversational
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

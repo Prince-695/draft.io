@@ -204,7 +204,10 @@ const Dashboard = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">
-            Welcome back, {user?.full_name || user?.username}!
+            {/* Show "Welcome" for new accounts (created < 10 min ago), otherwise "Welcome back" */}
+            {user?.created_at && (Date.now() - new Date(user.created_at).getTime()) < 10 * 60 * 1000
+              ? `Welcome, ${user?.full_name || user?.username}! 🎉`
+              : `Welcome back, ${user?.full_name || user?.username}!`}
           </h1>
           <p className="text-muted-foreground">Discover personalized content just for you</p>
         </div>

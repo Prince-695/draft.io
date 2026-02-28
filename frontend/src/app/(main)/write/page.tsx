@@ -34,6 +34,8 @@ function WritePageInner() {
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
   const [error, setError] = useState<string | null>(null);
   const [isLoadingBlog, setIsLoadingBlog] = useState(!!editId);
+  // Keeps the last 4 messages (2 exchanges) of AI conversation context
+  const [aiHistory, setAiHistory] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
 
   // AI hooks
   const { mutate: generateContent, isPending: isGenerating } = useGenerateContent();
@@ -210,12 +212,17 @@ function WritePageInner() {
             return;
           }
           improveContent(
-            { content, instructions: prompt },
+            { content, instructions: prompt || undefined, conversationHistory: aiHistory },
             {
               onSuccess: (response) => {
                 if (response.data?.result) {
                   const html = marked.parse(response.data.result) as string;
                   setContent(html);
+                  setAiHistory((prev) => [
+                    ...prev,
+                    { role: 'user', content: prompt || 'Improve this content' },
+                    { role: 'assistant', content: response.data!.result! },
+                  ].slice(-4));
                 }
               },
               onError: (err) => {
@@ -231,17 +238,25 @@ function WritePageInner() {
             setError('Please write some content first before checking grammar');
             return;
           }
-          checkGrammar(content, {
-            onSuccess: (response) => {
-              if (response.data?.result) {
-                const html = marked.parse(response.data.result) as string;
-                setContent(html);
-              }
-            },
-            onError: (err) => {
-              setError(getErrorMessage(err));
-            },
-          });
+          checkGrammar(
+            { content, instructions: prompt || undefined, conversationHistory: aiHistory },
+            {
+              onSuccess: (response) => {
+                if (response.data?.result) {
+                  const html = marked.parse(response.data.result) as string;
+                  setContent(html);
+                  setAiHistory((prev) => [
+                    ...prev,
+                    { role: 'user', content: prompt || 'Check and fix grammar' },
+                    { role: 'assistant', content: response.data!.result! },
+                  ].slice(-4));
+                }
+              },
+              onError: (err) => {
+                setError(getErrorMessage(err));
+              },
+            }
+          );
           break;
 
         case 'seo':
