@@ -12,6 +12,7 @@ import {
   useGrammarCheck, 
   useSEOSuggestions 
 } from '@/hooks/useAI';
+import { useUIStore } from '@/stores/uiStore';
 import { useCreateBlog, usePublishBlog, useUpdateBlog } from '@/hooks/useBlog';
 import { blogApi } from '@/lib/api';
 import { getErrorMessage } from '@/utils/helpers';
@@ -42,6 +43,7 @@ function WritePageInner() {
   const { mutate: improveContent, isPending: isImproving } = useImproveContent();
   const { mutate: checkGrammar, isPending: isCheckingGrammar } = useGrammarCheck();
   const { mutate: getSEO, isPending: isGettingSEO } = useSEOSuggestions();
+  const incrementAIUsage = useUIStore((s) => s.incrementAIUsage);
 
   // Blog mutation hooks
   const createBlogMutation = useCreateBlog();
@@ -192,6 +194,7 @@ function WritePageInner() {
             { prompt, context: content },
             {
               onSuccess: (response) => {
+                incrementAIUsage();
                 if (response.data?.result) {
                   // Convert AI markdown to HTML before inserting into TipTap
                   const html = marked.parse(response.data.result) as string;
@@ -215,6 +218,7 @@ function WritePageInner() {
             { content, instructions: prompt || undefined, conversationHistory: aiHistory },
             {
               onSuccess: (response) => {
+                incrementAIUsage();
                 if (response.data?.result) {
                   const html = marked.parse(response.data.result) as string;
                   setContent(html);
@@ -242,6 +246,7 @@ function WritePageInner() {
             { content, instructions: prompt || undefined, conversationHistory: aiHistory },
             {
               onSuccess: (response) => {
+                incrementAIUsage();
                 if (response.data?.result) {
                   const html = marked.parse(response.data.result) as string;
                   setContent(html);
@@ -269,6 +274,7 @@ function WritePageInner() {
             { title, content },
             {
               onSuccess: (response) => {
+                incrementAIUsage();
                 console.log('SEO Suggestions:', response.data?.suggestions);
                 // You could show these in a modal or side panel
               },

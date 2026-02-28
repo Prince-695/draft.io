@@ -25,7 +25,9 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  // Expose custom AI quota headers so the browser JS can read them
+  exposedHeaders: ['X-AI-Requests-Used', 'X-AI-Requests-Limit', 'X-AI-Requests-Remaining'],
 }));
 
 // Only parse JSON for non-proxied routes
