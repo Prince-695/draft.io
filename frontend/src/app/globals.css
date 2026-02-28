@@ -320,6 +320,67 @@ body {
   line-height: 1.6 !important;
 }
 
+/* ── Paragraph spacing in published blog view ── */
+/* Ensure every paragraph gets breathing room */
+.prose p {
+  margin-top: 1.25em !important;
+  margin-bottom: 1.25em !important;
+  line-height: 1.8 !important;
+}
+
+/* Empty paragraphs (blank line from double-Enter in editor) must have
+   visible height so the spacing is preserved when published */
+.prose p:empty,
+.prose p:has(> br:only-child) {
+  min-height: 1.5em !important;
+  display: block !important;
+}
+
+/* ── Heading hierarchy in published blog view ── */
+.prose h1 {
+  font-size: 2.25rem !important; /* 36px */
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  margin-top: 2rem !important;
+  margin-bottom: 0.75rem !important;
+  letter-spacing: -0.025em;
+}
+
+.prose h2 {
+  font-size: 1.75rem !important; /* 28px */
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  margin-top: 2rem !important;
+  margin-bottom: 0.6rem !important;
+  letter-spacing: -0.015em;
+}
+
+.prose h3 {
+  font-size: 1.375rem !important; /* 22px */
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.prose h4 {
+  font-size: 1.125rem !important; /* 18px */
+  font-weight: 600 !important;
+  margin-top: 1.25rem !important;
+  margin-bottom: 0.4rem !important;
+}
+
+/* Body text — slightly smaller than headings for clear hierarchy */
+.prose :is(p, li, td) {
+  font-size: 1rem !important; /* 16px — clear gap vs h3 at 22px and h4 at 18px */
+}
+
+/* ── Editor heading sizes (match published view) ── */
+.ProseMirror h1 { font-size: 2.25rem; font-weight: 800; line-height: 1.2; margin: 1.5rem 0 0.5rem; letter-spacing: -0.025em; }
+.ProseMirror h2 { font-size: 1.75rem; font-weight: 700; line-height: 1.3; margin: 1.5rem 0 0.4rem; letter-spacing: -0.015em; }
+.ProseMirror h3 { font-size: 1.375rem; font-weight: 600; line-height: 1.4; margin: 1.25rem 0 0.3rem; }
+.ProseMirror h4 { font-size: 1.125rem; font-weight: 600; margin: 1rem 0 0.3rem; }
+
 /* Horizontal rule */
 .ProseMirror hr {
   border-color: var(--border);
