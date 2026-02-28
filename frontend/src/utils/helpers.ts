@@ -13,6 +13,34 @@ export function formatDate(date: string | Date): string {
 }
 
 /**
+ * Format a chat message timestamp: shows time for today, "Yesterday HH:MM" for yesterday,
+ * otherwise "Mon DD, HH:MM".
+ */
+export function formatMessageTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = d.toDateString() === yesterday.toDateString();
+  const timeStr = d.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+  if (isToday) return timeStr;
+  if (isYesterday) return `Yesterday ${timeStr}`;
+  const datePart = d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(d.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
+  });
+  return `${datePart}, ${timeStr}`;
+}
+
+/**
  * Format a date to a relative time string (e.g., "2 hours ago")
  */
 export function formatRelativeTime(date: string | Date): string {

@@ -3,31 +3,26 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore, useChatStore } from '@/stores';
-import { formatDate } from '@/utils/helpers';
+import { formatMessageTime } from '@/utils/helpers';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { userApi } from '@/lib/api/user';
 import { chatApi } from '@/lib/api/chat';
+import { getChatSocket } from '@/lib/chatSocketInstance';
 import { Search, X, ExternalLink, Send } from 'lucide-react';
 import { ROUTES } from '@/utils/constants';
 import type { User as UserType } from '@/types';
-import { io, Socket } from 'socket.io-client';
-
-// Chat service runs on port 5007 — separate from the notification service (5006)
-const CHAT_WS_URL = process.env.NEXT_PUBLIC_CHAT_WS_URL || 'http://localhost:5007';
-
-// Stable pure helper — defined outside component so socket callbacks never have stale closure
-const normalizeMessage = (msg: any) => ({
-  id: msg._id?.toString() ?? msg.id ?? '',
-  sender_id: msg.senderId ?? msg.sender_id ?? '',
-  receiver_id: msg.receiverId ?? msg.receiver_id ?? '',
-  conversation_id: msg.conversationId ?? msg.conversation_id ?? '',
-  message: msg.content ?? msg.message ?? '',
-  created_at: msg.createdAt ?? msg.created_at ?? new Date().toISOString(),
-});
 
 export default function ChatPage() {
   const { user } = useAuthStore();
-  const { conversations, messages, onlineUsers, addMessage, addOnlineUser, removeOnlineUser, addTypingUser, removeTypingUser, setConversations, setMessages } = useChatStore();
+  const {
+    conversations,
+    messages,
+    onlineUsers,
+    setConversations,
+    setConversationMessages,
+    setActiveConversation,
+    typingUsers,
+  } = useChatStore();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -38,73 +33,19 @@ export default function ChatPage() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const chatSocketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const selectedConvRef = useRef<string | null>(null);
-
-  // Keep ref in sync so socket callbacks always see current value
-  useEffect(() => {
-    selectedConvRef.current = selectedConversation;
-  }, [selectedConversation]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages])
 
-  // Normalize backend camelCase → ChatMessage snake_case type — now a module-level function
-
+  // Clear active conversation from store when leaving the chat page
   useEffect(() => {
-    const token = useAuthStore.getState().tokens?.accessToken;
-    if (!token) return;
-
-    // Connect directly to chat-service (port 5007), NOT the notification service (5006)
-    const socket = io(CHAT_WS_URL, {
-      auth: { token },
-      transports: ['polling', 'websocket'],
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-    });
-    chatSocketRef.current = socket;
-
-    socket.on('connect', () => console.log('Chat socket connected'));
-    socket.on('connect_error', (e) => console.warn('Chat socket error:', e.message));
-
-    // Backend emits 'receive_message' to the receiver
-    socket.on('receive_message', (message: any) => {
-      addMessage(normalizeMessage(message));
-    });
-
-    // Backend emits 'message_sent' back to the sender as confirmation
-    socket.on('message_sent', (message: any) => {
-      addMessage(normalizeMessage(message));
-    });
-
-    // Backend broadcasts 'user_online' with { userId } when a user connects
-    socket.on('user_online', ({ userId }: { userId: string }) => {
-      addOnlineUser(userId);
-    });
-
-    // Backend broadcasts 'user_offline' with { userId } when a user disconnects
-    socket.on('user_offline', ({ userId }: { userId: string }) => {
-      removeOnlineUser(userId);
-    });
-
-    // Typing indicator
-    socket.on('typing_indicator', ({ senderId, isTyping: typing }: any) => {
-      if (typing) {
-        addTypingUser(senderId);
-        setTimeout(() => removeTypingUser(senderId), 3000);
-      } else {
-        removeTypingUser(senderId);
-      }
-    });
-
     return () => {
-      socket.disconnect();
-      chatSocketRef.current = null;
+      setActiveConversation(null);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Hydrate conversation list from backend on mount
@@ -152,18 +93,26 @@ export default function ChatPage() {
 
   // Load message history when a conversation is opened
   useEffect(() => {
-    if (!selectedConversation) return;
+    if (!selectedConversation || !user?.id) return;
     (async () => {
       try {
         const res = await chatApi.getMessages(selectedConversation);
-        const msgs = res?.data?.messages ?? [];
-        setMessages(msgs.map((msg) => normalizeMessage(msg)));
+        const msgs = (res?.data?.messages ?? []).map((msg: any) => ({
+          id: msg._id?.toString() ?? msg.id ?? '',
+          sender_id: msg.senderId ?? msg.sender_id ?? '',
+          receiver_id: msg.receiverId ?? msg.receiver_id ?? '',
+          conversation_id: msg.conversationId ?? msg.conversation_id ?? '',
+          message: msg.content ?? msg.message ?? '',
+          created_at: msg.createdAt ?? msg.created_at ?? '',
+        }));
+        // Merge: replaces only THIS conversation's messages, keeps others + any realtime extras
+        setConversationMessages(selectedConversation, user.id, msgs);
       } catch {
-        // ignore
+        // ignore — socket messages already in store remain visible
       }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedConversation]);
+  }, [selectedConversation, user?.id]);
 
   // People search
   useEffect(() => {
@@ -188,6 +137,7 @@ export default function ChatPage() {
       setConversations([{ user: u, unreadCount: 0 }, ...conversations]);
     }
     setSelectedConversation(u.id);
+    setActiveConversation(u); // let ChatSocketProvider know which conv is open
     setPeopleSearch('');
     setPeopleResults([]);
     setShowSearch(false);
@@ -213,10 +163,11 @@ export default function ChatPage() {
   }, [searchParams]);
 
   const handleSendMessage = () => {
-    if (!messageInput.trim() || !selectedConversation || !chatSocketRef.current) return;
+    const socket = getChatSocket();
+    if (!messageInput.trim() || !selectedConversation || !socket) return;
 
     // Backend expects: { receiverId, content }
-    chatSocketRef.current.emit('send_message', {
+    socket.emit('send_message', {
       receiverId: selectedConversation,
       content: messageInput.trim(),
     });
@@ -226,13 +177,14 @@ export default function ChatPage() {
   };
 
   const handleTyping = () => {
-    if (!isTyping && selectedConversation && chatSocketRef.current) {
+    const socket = getChatSocket();
+    if (!isTyping && selectedConversation && socket) {
       setIsTyping(true);
       // Backend expects: { receiverId }
-      chatSocketRef.current.emit('typing_start', { receiverId: selectedConversation });
+      socket.emit('typing_start', { receiverId: selectedConversation });
       setTimeout(() => {
         setIsTyping(false);
-        chatSocketRef.current?.emit('typing_stop', { receiverId: selectedConversation });
+        getChatSocket()?.emit('typing_stop', { receiverId: selectedConversation });
       }, 3000);
     }
   };
@@ -321,7 +273,7 @@ export default function ChatPage() {
               return (
                 <div
                   key={otherUser.id}
-                  onClick={() => setSelectedConversation(otherUser.id)}
+                  onClick={() => handleSelectUser(otherUser)}
                   className={`p-4 cursor-pointer hover:bg-accent transition-colors ${
                     selectedConversation === otherUser.id ? 'bg-accent' : ''
                   }`}
@@ -369,9 +321,13 @@ export default function ChatPage() {
                     {activeUser?.full_name || activeUser?.username || 'Unknown User'}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {activeUser && onlineUsers.has(activeUser.id)
-                      ? <span className="text-green-500">● Online</span>
-                      : <span>● Offline</span>}
+                    {typingUsers.has(activeUser?.id ?? '') ? (
+                      <span className="text-primary animate-pulse">● typing...</span>
+                    ) : activeUser && onlineUsers.has(activeUser.id) ? (
+                      <span className="text-green-500">● Online</span>
+                    ) : (
+                      <span className="text-muted-foreground">● Offline</span>
+                    )}
                   </div>
                 </div>
                 {activeUser?.username && (
@@ -432,7 +388,7 @@ export default function ChatPage() {
                           isOwn ? 'text-primary-foreground/60 text-right' : 'text-muted-foreground'
                         }`}
                       >
-                        {message.created_at ? formatDate(message.created_at) : ''}
+                        {formatMessageTime(message.created_at)}
                       </div>
                     </div>
                   </div>

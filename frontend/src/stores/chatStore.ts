@@ -20,6 +20,13 @@ interface ChatActions {
   setConversations: (conversations: Conversation[]) => void;
   setActiveConversation: (user: User | null) => void;
   setMessages: (messages: ChatMessage[]) => void;
+  /**
+   * Replace history for the [selfUserId ↔ otherUserId] conversation while
+   * preserving real-time messages already in the store for OTHER conversations.
+   * Any socket-received message for this conversation that isn't in the loaded
+   * history (edge-case race) is merged in rather than dropped.
+   */
+  setConversationMessages: (otherUserId: string, selfUserId: string, loaded: ChatMessage[]) => void;
   addMessage: (message: ChatMessage) => void;
   updateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
   setOnlineUsers: (userIds: string[]) => void;
@@ -45,10 +52,33 @@ export const useChatStore = create<ChatStore>()((set) => ({
   // Actions
   setConversations: (conversations) => set({ conversations }),
 
-  setActiveConversation: (user) => set({ activeConversation: user, messages: [] }),
+  // Update active conversation pointer (does NOT wipe messages)
+  setActiveConversation: (user) => set({ activeConversation: user }),
 
   setMessages: (messages) => set({ messages }),
 
+  setConversationMessages: (otherUserId, selfUserId, loaded) =>
+    set((state) => {
+      const loadedIds = new Set(loaded.map((m) => m.id).filter(Boolean));
+      // Strip old stored messages for this conversation pair
+      const otherConvMsgs = state.messages.filter((m) => {
+        const belongsHere =
+          (m.sender_id === selfUserId && m.receiver_id === otherUserId) ||
+          (m.sender_id === otherUserId && m.receiver_id === selfUserId);
+        return !belongsHere;
+      });
+      // Any realtime socket msg for this conv not yet in history (race edge case)
+      const realtimeExtras = state.messages.filter((m) => {
+        const belongsHere =
+          (m.sender_id === selfUserId && m.receiver_id === otherUserId) ||
+          (m.sender_id === otherUserId && m.receiver_id === selfUserId);
+        return belongsHere && m.id && !loadedIds.has(m.id);
+      });
+      const merged = [...loaded, ...realtimeExtras].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+      return { messages: [...otherConvMsgs, ...merged] };
+    }),
   addMessage: (message) =>
     set((state) => {
       // Deduplicate: skip if we already have a message with the same non-empty id
