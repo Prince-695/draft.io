@@ -5,7 +5,32 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+import { createLowlight } from 'lowlight';
+import javascript from 'highlight.js/lib/languages/javascript';
+import typescript from 'highlight.js/lib/languages/typescript';
+import python from 'highlight.js/lib/languages/python';
+import bash from 'highlight.js/lib/languages/bash';
+import css from 'highlight.js/lib/languages/css';
+import xml from 'highlight.js/lib/languages/xml'; // html
+import json from 'highlight.js/lib/languages/json';
+import sql from 'highlight.js/lib/languages/sql';
 import { useState, useEffect } from 'react';
+
+const lowlight = createLowlight();
+lowlight.register({ javascript, typescript, python, bash, css, xml, json, sql });
+
+const LANGUAGES = [
+  { value: '', label: 'Plain text' },
+  { value: 'bash', label: 'Bash / Shell' },
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'typescript', label: 'TypeScript' },
+  { value: 'python', label: 'Python' },
+  { value: 'css', label: 'CSS' },
+  { value: 'xml', label: 'HTML / XML' },
+  { value: 'json', label: 'JSON' },
+  { value: 'sql', label: 'SQL' },
+];
 
 interface EditorProps {
   content: string;
@@ -21,6 +46,8 @@ export function Editor({ content, onChange, placeholder = 'Start writing...' }: 
         // Disable Link in StarterKit (TipTap v3 includes it) to avoid duplicate extension warning
         // @ts-ignore – StarterKit v3 exposes link configuration
         link: false,
+        // Disable built-in codeBlock — we use CodeBlockLowlight instead
+        codeBlock: false,
       }),
       Placeholder.configure({
         placeholder,
@@ -29,6 +56,13 @@ export function Editor({ content, onChange, placeholder = 'Start writing...' }: 
         openOnClick: false,
       }),
       Image,
+      CodeBlockLowlight.configure({
+        lowlight,
+        defaultLanguage: 'bash',
+        HTMLAttributes: {
+          class: 'code-block',
+        },
+      }),
     ],
     content,
     onUpdate: ({ editor }) => {
@@ -36,7 +70,7 @@ export function Editor({ content, onChange, placeholder = 'Start writing...' }: 
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-lg dark:prose-invert max-w-none focus:outline-none min-h-[500px] px-4 py-3 text-foreground',
+        class: 'prose prose-lg dark:prose-invert max-w-none focus:outline-none min-h-[500px] px-4 py-3 text-foreground [&_p]:my-3 [&_p:empty]:min-h-[1.5em]',
       },
     },
   });
@@ -63,6 +97,7 @@ export function Editor({ content, onChange, placeholder = 'Start writing...' }: 
 function EditorToolbar({ editor }: { editor: any }) {
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
+  const isCodeBlockActive = editor.isActive('codeBlock');
 
   const setLink = () => {
     if (linkUrl) {
@@ -78,6 +113,8 @@ function EditorToolbar({ editor }: { editor: any }) {
       editor.chain().focus().setImage({ src: url }).run();
     }
   };
+
+  const currentLanguage = editor.getAttributes('codeBlock')?.language ?? '';
 
   return (
     <div className="border-b bg-muted/50 p-2 flex flex-wrap gap-1">
@@ -152,11 +189,26 @@ function EditorToolbar({ editor }: { editor: any }) {
       </button>
       <button
         onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-        className={`px-3 py-1.5 rounded text-foreground hover:bg-accent ${editor.isActive('codeBlock') ? 'bg-accent' : ''}`}
+        className={`px-3 py-1.5 rounded text-foreground hover:bg-accent ${isCodeBlockActive ? 'bg-accent' : ''}`}
         type="button"
+        title="Code block"
       >
-        Code
+        {'</>'}
       </button>
+      {isCodeBlockActive && (
+        <select
+          value={currentLanguage}
+          onChange={(e) =>
+            editor.chain().focus().updateAttributes('codeBlock', { language: e.target.value || null }).run()
+          }
+          className="px-2 py-1 rounded border border-input bg-background text-foreground text-xs"
+          title="Select language"
+        >
+          {LANGUAGES.map((l) => (
+            <option key={l.value} value={l.value}>{l.label}</option>
+          ))}
+        </select>
+      )}
 
       <div className="w-px bg-border mx-1" />
 

@@ -100,7 +100,7 @@ function WritePageInner() {
             cover_image_url: coverImage || undefined,
             status: 'draft',
           });
-          if (res?.data?.id) setSavedBlogId(res.data.id);
+          if (res?.data?.blog?.id) setSavedBlogId(res.data.blog.id);
         }
         setAutoSaveStatus('saved');
       } catch {
@@ -128,7 +128,7 @@ function WritePageInner() {
         const res = await createBlogMutation.mutateAsync({
           title, content, tags, cover_image_url: coverImage || undefined, status: 'draft',
         });
-        if (res?.data?.id) setSavedBlogId(res.data.id);
+        if (res?.data?.blog?.id) setSavedBlogId(res.data.blog.id);
       }
       setAutoSaveStatus('saved');
       router.push(ROUTES.DASHBOARD);
@@ -152,17 +152,23 @@ function WritePageInner() {
           id: blogId,
           data: { title, content, tags, cover_image_url: coverImage || undefined, status: 'published' },
         });
-        blogId = res?.data?.id || blogId;
+        blogId = res?.data?.blog?.id || blogId;
       } else {
         const res = await createBlogMutation.mutateAsync({
           title, content, tags, cover_image_url: coverImage || undefined, status: 'published',
         });
-        blogId = res?.data?.id ?? null;
+        blogId = res?.data?.blog?.id ?? null;
         if (blogId) setSavedBlogId(blogId);
       }
       // Explicitly publish via the publish endpoint (blog service may require it)
       if (blogId) {
-        try { await publishBlogMutation.mutateAsync(blogId); } catch { /* already published */ }
+        try {
+          await publishBlogMutation.mutateAsync(blogId);
+        } catch (publishErr: any) {
+          // Swallow only "already published" errors; surface everything else
+          const msg: string = publishErr?.response?.data?.error ?? '';
+          if (!msg.toLowerCase().includes('already published')) throw publishErr;
+        }
       }
       router.push(ROUTES.DASHBOARD);
     } catch (err) {

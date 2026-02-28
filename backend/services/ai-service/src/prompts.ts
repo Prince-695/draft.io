@@ -29,10 +29,25 @@ export const buildGenerateBlogContentPrompt = (
 ): string =>
   `Write a ${tone} blog post about "${topic}".
 The content should be approximately ${wordRange}.
-Make it engaging, informative, and well-structured with proper paragraphs.
-Structure the content with clearly separated paragraphs, each focusing on a single idea.
-Use **bold text** for key terms, section headers, and important points throughout.
-Do not include a title, just the main content.`;
+Make it engaging, informative, and well-structured.
+
+Formatting rules you MUST follow:
+- Use proper Markdown throughout.
+- Wrap every code snippet, command, or script in a fenced code block with the correct language tag, e.g.:
+  \`\`\`bash
+  npm install some-package
+  \`\`\`
+  or
+  \`\`\`javascript
+  const x = 1;
+  \`\`\`
+- Use \`inline code\` for short identifiers, filenames, flags, and commands mentioned inside prose.
+- Use **bold** for key terms and important ideas.
+- Separate each paragraph with a blank line.
+- Do NOT include a title — just the main content.
+- If the topic involves any commands, scripts, configurations, or code, ALWAYS put them in fenced code blocks — never inline in the paragraph text.`;
+
+
 
 /**
  * @used-in  content.controller.ts → generateTitles()
@@ -72,8 +87,10 @@ Format the outline in a clear, hierarchical structure.`;
  *           COMPLETE text so it never truncates long blogs.
  */
 export const WRITING_ASSISTANT_SYSTEM_MESSAGE =
-  `You are an expert writing assistant. When given text to improve or modify, \
-always return the COMPLETE modified text — never summarise, truncate, or omit any part of it.`;
+  `You are an expert writing assistant. When given text to improve or modify:
+- Always return the COMPLETE modified text — never summarise, truncate, or omit any part of it.
+- Preserve ALL fenced code blocks exactly as-is (including the language tag) unless the user explicitly asks you to change them.
+- Use proper Markdown: fenced code blocks (\`\`\`lang\n...\n\`\`\`) for code, \`inline code\` for short identifiers, and **bold** for key terms.`;
 
 /**
  * @used-in  improvement.controller.ts → checkGrammar()
