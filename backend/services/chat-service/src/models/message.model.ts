@@ -15,6 +15,7 @@ export interface Message {
 
 export interface Conversation {
   _id?: ObjectId;
+  conversationId: string; // sorted userId1_userId2 — unique key used for upserts
   participants: string[]; // [userId1, userId2]
   lastMessage?: string;
   lastMessageAt?: Date;
@@ -58,9 +59,10 @@ class MessageModel {
     const result = await db.collection<Message>(this.collectionName).insertOne(message);
     message._id = result.insertedId;
 
-    // Update or create conversation
+    // Update or create conversation — query by conversationId to avoid
+    // the MongoDB "$all + $setOnInsert" path-conflict error (code 54)
     await db.collection<Conversation>(this.conversationsCollection).updateOne(
-      { participants: { $all: [senderId, receiverId] } },
+      { conversationId },
       {
         $set: {
           lastMessage: content,
@@ -68,6 +70,7 @@ class MessageModel {
           updatedAt: new Date(),
         },
         $setOnInsert: {
+          conversationId,
           participants: [senderId, receiverId],
           createdAt: new Date(),
         },
@@ -152,18 +155,55 @@ class MessageModel {
   }
 
   /**
-   * Get user's conversation list
+   * Get user's conversation list.
+   * Derives conversations directly from the messages collection so it works
+   * even when the conversations collection is empty (e.g. after migration or
+   * when previous upserts failed).
    */
   async getConversations(userId: string): Promise<Conversation[]> {
     const db = getDB();
 
-    const conversations = await db
-      .collection<Conversation>(this.conversationsCollection)
-      .find({ participants: userId })
-      .sort({ lastMessageAt: -1 })
-      .toArray();
+    // Aggregate unique conversation partners from the messages collection
+    const pipeline = [
+      {
+        $match: {
+          isDeleted: false,
+          $or: [{ senderId: userId }, { receiverId: userId }],
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: '$conversationId',
+          lastMessage: { $first: '$content' },
+          lastMessageAt: { $first: '$createdAt' },
+          senderId: { $first: '$senderId' },
+          receiverId: { $first: '$receiverId' },
+          updatedAt: { $first: '$updatedAt' },
+          createdAt: { $last: '$createdAt' },
+        },
+      },
+      { $sort: { lastMessageAt: -1 } },
+    ];
 
-    return conversations;
+    const results = await db.collection(this.collectionName).aggregate(pipeline).toArray();
+
+    return results
+      .map((r) => {
+        // Derive the other participant (the one who is NOT the requesting user)
+        const otherUserId = r.senderId === userId ? r.receiverId : r.senderId;
+        return {
+          _id: r._id,
+          conversationId: r._id as string,
+          participants: [userId, otherUserId],
+          lastMessage: r.lastMessage,
+          lastMessageAt: r.lastMessageAt,
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+        };
+      })
+      // Drop any conversation where the other participant is missing/empty
+      .filter((c) => c.participants[1]) as Conversation[];
   }
 
   /**

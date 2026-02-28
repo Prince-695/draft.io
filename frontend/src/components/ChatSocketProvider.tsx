@@ -45,8 +45,15 @@ export function ChatSocketProvider() {
     const token = useAuthStore.getState().tokens?.accessToken;
     if (!token) return;
 
-    // Reuse existing connected socket if present
-    if (getChatSocket()?.connected) return;
+    // If a socket already exists (connected or reconnecting), don't create another
+    const existing = getChatSocket();
+    if (existing) {
+      // If it's alive, nothing to do
+      if (existing.connected || existing.active) return;
+      // Dead socket — clean up before creating a new one
+      existing.disconnect();
+      setChatSocket(null);
+    }
 
     const socket = io(CHAT_WS_URL, {
       auth: { token },

@@ -5,6 +5,25 @@ import messageModel from '../models/message.model';
 const router = Router();
 
 /**
+ * Get unread message count — must come BEFORE /:userId to avoid path conflict
+ * GET /unread/count
+ */
+router.get('/unread/count', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const count = await messageModel.getUnreadCount(userId);
+
+    res.json({
+      success: true,
+      count,
+    });
+  } catch (error) {
+    console.error('Error fetching unread count:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch unread count' });
+  }
+});
+
+/**
  * Get message history with another user
  * GET /messages/:userId?page=1&limit=50
  */
@@ -68,25 +87,6 @@ router.delete('/:messageId', authMiddleware, async (req: AuthRequest, res: Respo
   } catch (error) {
     console.error('Error deleting message:', error);
     res.status(500).json({ success: false, error: 'Failed to delete message' });
-  }
-});
-
-/**
- * Get unread message count
- * GET /unread-count
- */
-router.get('/unread/count', authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.userId!;
-    const count = await messageModel.getUnreadCount(userId);
-
-    res.json({
-      success: true,
-      count,
-    });
-  } catch (error) {
-    console.error('Error fetching unread count:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch unread count' });
   }
 });
 
