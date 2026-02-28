@@ -1,6 +1,8 @@
 import apiClient from './client';
 import { API_ENDPOINTS } from '@/utils/constants';
-import type { Blog, ApiResponse, PaginatedResponse } from '@/types';
+import type { Blog, ApiResponse } from '@/types';
+
+type BlogListResponse = { blogs: Blog[]; count: number };
 
 interface CreateBlogData {
   title: string;
@@ -13,9 +15,9 @@ interface CreateBlogData {
 
 export const blogApi = {
   // Get all blogs (with pagination)
-  getBlogs: async (page = 1, limit = 10): Promise<ApiResponse<PaginatedResponse<Blog>>> => {
+  getBlogs: async (page = 1, limit = 10): Promise<ApiResponse<BlogListResponse>> => {
     const response = await apiClient.get(`${API_ENDPOINTS.BLOG.LIST}/feed`, {
-      params: { page, limit },
+      params: { limit, offset: (page - 1) * limit },
     });
     return response.data;
   },
@@ -51,24 +53,44 @@ export const blogApi = {
   },
 
   // Search blogs
-  searchBlogs: async (query: string, page = 1): Promise<ApiResponse<PaginatedResponse<Blog>>> => {
+  searchBlogs: async (query: string, page = 1): Promise<ApiResponse<BlogListResponse>> => {
     const response = await apiClient.get(API_ENDPOINTS.BLOG.SEARCH, {
-      params: { q: query, page },
+      params: { q: query, limit: 10, offset: (page - 1) * 10 },
     });
     return response.data;
   },
 
   // Get trending blogs
   getTrending: async (): Promise<ApiResponse<Blog[]>> => {
-    const response = await apiClient.get(`${API_ENDPOINTS.BLOG.LIST}/trending`);
+    const response = await apiClient.get(`${API_ENDPOINTS.RECOMMENDATIONS.TRENDING}?limit=10`);
     return response.data;
   },
 
-  // Get my blogs
-  getMyBlogs: async (page = 1): Promise<ApiResponse<PaginatedResponse<Blog>>> => {
+  // Get personalised feed from recommendation service
+  getRecommendedFeed: async (): Promise<ApiResponse<Blog[]>> => {
+    const response = await apiClient.get(`${API_ENDPOINTS.RECOMMENDATIONS.FEED}?limit=20`);
+    return response.data;
+  },
+
+  // Get my blogs (all statuses — requires auth)
+  getMyBlogs: async (page = 1): Promise<ApiResponse<BlogListResponse>> => {
     const response = await apiClient.get(API_ENDPOINTS.BLOG.MY_BLOGS, {
-      params: { page },
+      params: { limit: 20, offset: (page - 1) * 20 },
     });
+    return response.data;
+  },
+
+  // Get published blogs by any user ID (public)
+  getUserBlogs: async (userId: string, page = 1): Promise<ApiResponse<BlogListResponse>> => {
+    const response = await apiClient.get(`${API_ENDPOINTS.BLOG.USER_BLOGS}/${userId}`, {
+      params: { limit: 20, offset: (page - 1) * 20 },
+    });
+    return response.data;
+  },
+
+  // Get a single blog by ID (works with UUID — for edit mode, returns drafts too)
+  getBlogById: async (id: string): Promise<ApiResponse<Blog>> => {
+    const response = await apiClient.get(`${API_ENDPOINTS.BLOG.GET}/${id}`);
     return response.data;
   },
 };
