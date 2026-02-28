@@ -11,7 +11,7 @@ import { API_ENDPOINTS, ROUTES } from '@/utils/constants';
 import type { Notification } from '@/types';
 
 const ICONS: Record<string, string> = {
-  like: '❤️', comment: '💬', follow: '👤', mention: '@', default: '🔔',
+  like: '❤️', comment: '💬', follow: '👤', mention: '@', message: '📬', default: '🔔',
 };
 
 async function fetchNotifications(): Promise<Notification[]> {
@@ -117,7 +117,13 @@ export function NotificationDropdown() {
                 notifications.map((n) => (
                   <div
                     key={n.id}
-                    className={`px-4 py-3 border-b border-border/50 hover:bg-accent/50 transition-colors ${
+                    onClick={() => {
+                      if (n.link) router.push(n.link);
+                      setIsOpen(false);
+                    }}
+                    className={`px-4 py-3 border-b border-border/50 transition-colors ${
+                      n.link ? 'cursor-pointer hover:bg-accent/50' : ''
+                    } ${
                       !n.is_read ? 'bg-primary/5' : ''
                     }`}
                   >

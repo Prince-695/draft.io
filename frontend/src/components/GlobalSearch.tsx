@@ -33,11 +33,11 @@ export function GlobalSearch() {
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, []);
 
-  // Debounced search
+  // Debounced search — fires 600ms after the user stops typing, min 2 chars
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (!query.trim()) {
+    if (query.trim().length < 2) {
       setUsers([]);
       setBlogs([]);
       return;
@@ -66,7 +66,7 @@ export function GlobalSearch() {
       } finally {
         setLoading(false);
       }
-    }, 300);
+    }, 600);
   }, [query]);
 
   function navigate(path: string) {

@@ -28,6 +28,35 @@ const buildProfileResponse = (row: any) => ({
   created_at: row.created_at,
 });
 
+export const getProfileById = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    const db = require('../config/database').default;
+
+    const result = await db.query(
+      `SELECT u.id, u.username, u.email, u.full_name, u.is_verified, u.created_at,
+              p.bio, p.avatar_url, p.cover_image_url, p.location, p.website,
+              p.twitter_handle, p.linkedin_url, p.github_url,
+              p.interests, p.expertise_tags, p.writing_goals, p.experience_level,
+              p.followers_count, p.following_count
+       FROM users u
+       LEFT JOIN user_profiles p ON p.user_id = u.id
+       WHERE u.id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ success: false, error: 'User not found' });
+      return;
+    }
+
+    const row = result.rows[0];
+    res.json({ success: true, data: buildProfileResponse(row) });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 export const getProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { username } = req.params;

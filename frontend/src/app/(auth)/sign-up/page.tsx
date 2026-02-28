@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/card';
 import { API_URL, APP_NAME, ROUTES } from '@/utils/constants';
 import { getErrorMessage } from '@/utils/helpers';
-import { toast } from 'gooey-toast';
+import { toast } from '@/utils/toast';
 
 export default function SignUpPage() {
   const router = useRouter();

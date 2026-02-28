@@ -40,6 +40,7 @@ export const API_ENDPOINTS = {
   },
   USER: {
     PROFILE: '/api/users/profile',
+    GET_BY_ID: '/api/users/profile/id',
     UPDATE_PROFILE: '/api/users/profile',
     PERSONALIZE: '/api/users/profile/personalize',
     UPLOAD_AVATAR: '/api/users/profile/avatar',
@@ -77,6 +78,7 @@ export const API_ENDPOINTS = {
     IMPROVE: '/api/ai/improve/content',
     SEO: '/api/ai/seo/suggestions',
     SUMMARIZE: '/api/ai/summarize',
+    USAGE: '/api/ai/usage',
   },
   CHAT: {
     CONVERSATIONS: '/api/chat/conversations',
@@ -94,6 +96,8 @@ export const API_ENDPOINTS = {
     FEED: '/api/recommendations/feed',
     TRENDING: '/api/recommendations/trending',
     SIMILAR: '/api/recommendations/similar',
+    SEED_INTERESTS: '/api/recommendations/seed-interests',
+    TRACK_READ: '/api/recommendations/track-read',
   },
 } as const;
 

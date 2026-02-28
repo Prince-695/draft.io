@@ -3,7 +3,7 @@ import { generateContent, generateTitles, generateOutline } from '../controllers
 import { checkGrammar, improveContent } from '../controllers/improvement.controller';
 import { generateSEO, summarizeContent } from '../controllers/seo.controller';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { rateLimiter, trackUsage } from '../middleware/ratelimit.middleware';
+import { rateLimiter, getUsageHandler } from '../middleware/ratelimit.middleware';
 import {
   validate,
   contentGenerationSchema,
@@ -17,10 +17,14 @@ import {
 
 const router = Router();
 
-// Apply authentication and rate limiting to all routes
+// All routes require authentication
 router.use(authenticateToken);
+
+// Usage check does NOT consume a request — must be registered before rateLimiter
+router.get('/usage', getUsageHandler);
+
+// Rate limiting applied to all AI generation/improvement routes below
 router.use(rateLimiter);
-router.use(trackUsage);
 
 // Content generation routes
 router.post('/generate/content', validate(contentGenerationSchema), generateContent);

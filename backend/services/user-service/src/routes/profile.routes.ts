@@ -12,6 +12,9 @@ router.get('/me/profile', authMiddleware, profileController.getMyProfile);
 // Search users (protected) — must come before /:username
 router.get('/search/users', authMiddleware, profileController.searchUsers);
 
+// Get profile by ID (protected) — must come before /:username
+router.get('/id/:userId', authMiddleware, profileController.getProfileById);
+
 // Update profile (protected)
 router.put('/', authMiddleware, validateUpdateProfile, profileController.updateProfile);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { use, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { formatDate, calculateReadingTime } from '@/utils/helpers';
@@ -26,8 +26,9 @@ import { useBlog } from '@/hooks/useBlog';
 import { useFollowUser, useUnfollowUser } from '@/hooks/useUser';
 import { useAuthStore } from '@/stores';
 import { engagementApi } from '@/lib/api';
+import apiClient from '@/lib/api/client';
 import type { Comment } from '@/types';
-import { ROUTES } from '@/utils/constants';
+import { ROUTES, API_ENDPOINTS } from '@/utils/constants';
 
 interface BlogPageProps {
   params: Promise<{ slug: string }>;
@@ -51,6 +52,38 @@ export default function BlogPage({ params }: BlogPageProps) {
   const [isFollowing, setIsFollowing] = useState(false);
   const followUser = useFollowUser();
   const unfollowUser = useUnfollowUser();
+
+  // Track read start time for computing time-spent signal
+  const readStartRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!blog?.id || !isAuthenticated) return;
+
+    // Record the moment the user opened the article
+    readStartRef.current = Date.now();
+
+    // Immediately tell the recommendation engine this blog was opened
+    apiClient
+      .post(API_ENDPOINTS.RECOMMENDATIONS.TRACK_READ, { blogId: blog.id, timeSpent: 0 })
+      .catch(() => { /* non-critical */ });
+
+    return () => {
+      // On unmount send the real time-spent (best-effort)
+      if (!readStartRef.current || !blog?.id) return;
+      const timeSpent = Math.round((Date.now() - readStartRef.current) / 1000);
+      if (timeSpent < 3) return; // ignore accidental page flashes
+      const token = useAuthStore.getState().tokens?.accessToken;
+      if (!token) return;
+      // keepalive so the request survives the component unmount
+      fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'}${API_ENDPOINTS.RECOMMENDATIONS.TRACK_READ}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ blogId: blog.id, timeSpent }),
+        keepalive: true,
+      }).catch(() => { /* non-critical */ });
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blog?.id, isAuthenticated]);
 
   useEffect(() => {
     if (blog) {

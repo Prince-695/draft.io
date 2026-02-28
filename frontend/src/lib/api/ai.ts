@@ -68,11 +68,17 @@ export const aiApi = {
   },
 
   // Check grammar and spelling
-  // Backend expects { content } — returns { correctedText, errors, errorCount }
+  // Backend expects { content, instructions?, conversationHistory? }
   checkGrammar: async (data: {
     content: string;
+    instructions?: string;
+    conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
   }): Promise<ApiResponse<NormalizedAIResponse>> => {
-    const response = await apiClient.post(API_ENDPOINTS.AI.GRAMMAR, data);
+    const response = await apiClient.post(API_ENDPOINTS.AI.GRAMMAR, {
+      content: data.content,
+      ...(data.instructions ? { instructions: data.instructions } : {}),
+      ...(data.conversationHistory?.length ? { conversationHistory: data.conversationHistory } : {}),
+    });
     const raw = response.data;
     // Expose correctedText as result so write page can replace editor content
     return {
@@ -82,21 +88,30 @@ export const aiApi = {
   },
 
   // Improve content quality
-  // Backend expects { content, improvementType? } — returns { improvedContent, ... }
-  // The `instructions` field is accepted for API compatibility but maps to improvementType 'all'
+  // Backend expects { content, improvementType?, instructions?, conversationHistory? }
   improveContent: async (data: {
     content: string;
     instructions?: string;
+    conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
   }): Promise<ApiResponse<NormalizedAIResponse>> => {
     const response = await apiClient.post(API_ENDPOINTS.AI.IMPROVE, {
       content: data.content,
-      improvementType: 'all',
+      // Only send improvementType when there's no custom instruction
+      ...(data.instructions ? { instructions: data.instructions } : { improvementType: 'all' }),
+      ...(data.conversationHistory?.length ? { conversationHistory: data.conversationHistory } : {}),
     });
     const raw = response.data;
     return {
       ...raw,
       data: { ...(raw.data ?? {}), result: raw.data?.improvedContent ?? raw.data?.result ?? '' },
     };
+  },
+
+  // Get current monthly AI usage for the logged-in user (does not consume a request)
+  getUsage: async (): Promise<{ used: number; limit: number; remaining: number }> => {
+    const response = await apiClient.get('/api/ai/usage');
+    const { used, limit, remaining } = response.data?.data ?? { used: 0, limit: 10, remaining: 10 };
+    return { used, limit, remaining };
   },
 
   // Get SEO suggestions

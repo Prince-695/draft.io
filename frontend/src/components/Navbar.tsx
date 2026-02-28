@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { User, Settings, LogOut, Bell, LayoutDashboard } from 'lucide-react';
+import { User, Settings, LogOut, Bell, LayoutDashboard, Menu, X, Compass, PenLine, MessageCircle, LayoutGrid } from 'lucide-react';
 import { NotificationDropdown } from '@/components/NotificationDropdown';
 import { GlobalSearch } from '@/components/GlobalSearch';
 import { useAuthStore } from '@/stores';
@@ -13,6 +13,7 @@ export function Navbar() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,54 +28,59 @@ export function Navbar() {
 
   function handleNav(path: string) {
     setMenuOpen(false);
+    setMobileNavOpen(false);
     router.push(path);
   }
+
+  const NAV_ITEMS = [
+    { label: 'Feed', href: ROUTES.DASHBOARD, icon: LayoutGrid },
+    { label: 'Explore', href: ROUTES.EXPLORE, icon: Compass },
+    { label: 'Write', href: ROUTES.WRITE, icon: PenLine },
+    { label: 'Chat', href: ROUTES.CHAT, icon: MessageCircle },
+  ];
 
   return (
     <nav className="bg-background/95 border-b border-border sticky top-0 z-40 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <div className="flex items-center gap-8">
+          {/* Left: hamburger (mobile) + logo + desktop nav links */}
+          <div className="flex items-center gap-3">
+            {/* Hamburger — mobile only */}
+            <button
+              onClick={() => setMobileNavOpen((p) => !p)}
+              className="md:hidden p-1.5 rounded-md hover:bg-accent transition-colors"
+              aria-label="Toggle navigation"
+            >
+              {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+
             <button
               onClick={() => router.push(ROUTES.DASHBOARD)}
               className="text-2xl font-bold text-primary"
             >
               Draft.io
             </button>
-            
-            <div className="hidden md:flex gap-6">
-              <button
-                onClick={() => router.push(ROUTES.DASHBOARD)}
-                className="text-foreground/70 hover:text-foreground transition-colors"
-              >
-                Feed
-              </button>
-              <button
-                onClick={() => router.push(ROUTES.EXPLORE)}
-                className="text-foreground/70 hover:text-foreground transition-colors"
-              >
-                Explore
-              </button>
-              <button
-                onClick={() => router.push(ROUTES.WRITE)}
-                className="text-foreground/70 hover:text-foreground transition-colors"
-              >
-                Write
-              </button>
-              <button
-                onClick={() => router.push(ROUTES.CHAT)}
-                className="text-foreground/70 hover:text-foreground transition-colors"
-              >
-                Chat
-              </button>
+
+            {/* Desktop nav links */}
+            <div className="hidden md:flex gap-6 ml-4">
+              {NAV_ITEMS.map(({ label, href }) => (
+                <button
+                  key={label}
+                  onClick={() => router.push(href)}
+                  className="text-foreground/70 hover:text-foreground transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
           {/* Right Side */}
           <div className="flex items-center gap-3">
-            {/* Global Search */}
-            <GlobalSearch />
+            {/* Global Search — hide on very small screens */}
+            <div className="hidden sm:block">
+              <GlobalSearch />
+            </div>
 
             {/* Notifications */}
             <NotificationDropdown />
@@ -140,6 +146,26 @@ export function Navbar() {
           </div>
         </div>
       </div>
+
+      {/* Mobile nav drawer */}
+      {mobileNavOpen && (
+        <div className="md:hidden border-t bg-background/98 px-4 py-3 flex flex-col gap-1">
+          {NAV_ITEMS.map(({ label, href, icon: Icon }) => (
+            <button
+              key={label}
+              onClick={() => handleNav(href)}
+              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-md hover:bg-accent transition-colors w-full text-left"
+            >
+              <Icon className="w-4 h-4 text-muted-foreground" />
+              {label}
+            </button>
+          ))}
+          {/* Show search on very small screens inside the mobile drawer */}
+          <div className="sm:hidden mt-2 pt-2 border-t border-border">
+            <GlobalSearch />
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

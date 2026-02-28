@@ -8,6 +8,9 @@ interface UIState {
   sidebarOpen: boolean;
   isMobile: boolean;
   messagePanelOpen: boolean;
+  // AI monthly quota — updated on page load and after each AI call
+  aiRequestsUsed: number;
+  aiRequestsLimit: number;
 }
 
 interface UIActions {
@@ -17,6 +20,9 @@ interface UIActions {
   setIsMobile: (isMobile: boolean) => void;
   toggleMessagePanel: () => void;
   setMessagePanelOpen: (open: boolean) => void;
+  setAIUsage: (used: number, limit: number) => void;
+  // Increments used count by 1 instantly after a successful AI call
+  incrementAIUsage: () => void;
 }
 
 export type UIStore = UIState & UIActions;
@@ -29,6 +35,8 @@ export const useUIStore = create<UIStore>()(
       sidebarOpen: true,
       isMobile: false,
       messagePanelOpen: false,
+      aiRequestsUsed: 0,
+      aiRequestsLimit: 10,
 
       // Actions
       setTheme: (theme) => set({ theme }),
@@ -42,6 +50,11 @@ export const useUIStore = create<UIStore>()(
       toggleMessagePanel: () => set((state) => ({ messagePanelOpen: !state.messagePanelOpen })),
 
       setMessagePanelOpen: (open) => set({ messagePanelOpen: open }),
+
+      setAIUsage: (used, limit) => set({ aiRequestsUsed: used, aiRequestsLimit: limit }),
+
+      incrementAIUsage: () =>
+        set((state) => ({ aiRequestsUsed: Math.min(state.aiRequestsUsed + 1, state.aiRequestsLimit) })),
     }),
     {
       name: 'ui-storage',

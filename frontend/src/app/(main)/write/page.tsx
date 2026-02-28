@@ -12,6 +12,7 @@ import {
   useGrammarCheck, 
   useSEOSuggestions 
 } from '@/hooks/useAI';
+import { useUIStore } from '@/stores/uiStore';
 import { useCreateBlog, usePublishBlog, useUpdateBlog } from '@/hooks/useBlog';
 import { blogApi } from '@/lib/api';
 import { getErrorMessage } from '@/utils/helpers';
@@ -34,12 +35,15 @@ function WritePageInner() {
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
   const [error, setError] = useState<string | null>(null);
   const [isLoadingBlog, setIsLoadingBlog] = useState(!!editId);
+  // Keeps the last 4 messages (2 exchanges) of AI conversation context
+  const [aiHistory, setAiHistory] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
 
   // AI hooks
   const { mutate: generateContent, isPending: isGenerating } = useGenerateContent();
   const { mutate: improveContent, isPending: isImproving } = useImproveContent();
   const { mutate: checkGrammar, isPending: isCheckingGrammar } = useGrammarCheck();
   const { mutate: getSEO, isPending: isGettingSEO } = useSEOSuggestions();
+  const incrementAIUsage = useUIStore((s) => s.incrementAIUsage);
 
   // Blog mutation hooks
   const createBlogMutation = useCreateBlog();
@@ -96,7 +100,7 @@ function WritePageInner() {
             cover_image_url: coverImage || undefined,
             status: 'draft',
           });
-          if (res?.data?.id) setSavedBlogId(res.data.id);
+          if (res?.data?.blog?.id) setSavedBlogId(res.data.blog.id);
         }
         setAutoSaveStatus('saved');
       } catch {
@@ -124,7 +128,7 @@ function WritePageInner() {
         const res = await createBlogMutation.mutateAsync({
           title, content, tags, cover_image_url: coverImage || undefined, status: 'draft',
         });
-        if (res?.data?.id) setSavedBlogId(res.data.id);
+        if (res?.data?.blog?.id) setSavedBlogId(res.data.blog.id);
       }
       setAutoSaveStatus('saved');
       router.push(ROUTES.DASHBOARD);
@@ -148,17 +152,23 @@ function WritePageInner() {
           id: blogId,
           data: { title, content, tags, cover_image_url: coverImage || undefined, status: 'published' },
         });
-        blogId = res?.data?.id || blogId;
+        blogId = res?.data?.blog?.id || blogId;
       } else {
         const res = await createBlogMutation.mutateAsync({
           title, content, tags, cover_image_url: coverImage || undefined, status: 'published',
         });
-        blogId = res?.data?.id ?? null;
+        blogId = res?.data?.blog?.id ?? null;
         if (blogId) setSavedBlogId(blogId);
       }
       // Explicitly publish via the publish endpoint (blog service may require it)
       if (blogId) {
-        try { await publishBlogMutation.mutateAsync(blogId); } catch { /* already published */ }
+        try {
+          await publishBlogMutation.mutateAsync(blogId);
+        } catch (publishErr: any) {
+          // Swallow only "already published" errors; surface everything else
+          const msg: string = publishErr?.response?.data?.error ?? '';
+          if (!msg.toLowerCase().includes('already published')) throw publishErr;
+        }
       }
       router.push(ROUTES.DASHBOARD);
     } catch (err) {
@@ -190,6 +200,7 @@ function WritePageInner() {
             { prompt, context: content },
             {
               onSuccess: (response) => {
+                incrementAIUsage();
                 if (response.data?.result) {
                   // Convert AI markdown to HTML before inserting into TipTap
                   const html = marked.parse(response.data.result) as string;
@@ -210,12 +221,18 @@ function WritePageInner() {
             return;
           }
           improveContent(
-            { content, instructions: prompt },
+            { content, instructions: prompt || undefined, conversationHistory: aiHistory },
             {
               onSuccess: (response) => {
+                incrementAIUsage();
                 if (response.data?.result) {
                   const html = marked.parse(response.data.result) as string;
                   setContent(html);
+                  setAiHistory((prev) => [
+                    ...prev,
+                    { role: 'user', content: prompt || 'Improve this content' },
+                    { role: 'assistant', content: response.data!.result! },
+                  ].slice(-4));
                 }
               },
               onError: (err) => {
@@ -231,17 +248,26 @@ function WritePageInner() {
             setError('Please write some content first before checking grammar');
             return;
           }
-          checkGrammar(content, {
-            onSuccess: (response) => {
-              if (response.data?.result) {
-                const html = marked.parse(response.data.result) as string;
-                setContent(html);
-              }
-            },
-            onError: (err) => {
-              setError(getErrorMessage(err));
-            },
-          });
+          checkGrammar(
+            { content, instructions: prompt || undefined, conversationHistory: aiHistory },
+            {
+              onSuccess: (response) => {
+                incrementAIUsage();
+                if (response.data?.result) {
+                  const html = marked.parse(response.data.result) as string;
+                  setContent(html);
+                  setAiHistory((prev) => [
+                    ...prev,
+                    { role: 'user', content: prompt || 'Check and fix grammar' },
+                    { role: 'assistant', content: response.data!.result! },
+                  ].slice(-4));
+                }
+              },
+              onError: (err) => {
+                setError(getErrorMessage(err));
+              },
+            }
+          );
           break;
 
         case 'seo':
@@ -254,6 +280,7 @@ function WritePageInner() {
             { title, content },
             {
               onSuccess: (response) => {
+                incrementAIUsage();
                 console.log('SEO Suggestions:', response.data?.suggestions);
                 // You could show these in a modal or side panel
               },

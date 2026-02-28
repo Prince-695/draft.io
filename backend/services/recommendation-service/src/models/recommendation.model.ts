@@ -30,7 +30,40 @@ interface Blog {
 
 class RecommendationModel {
   /**
-   * Track blog read event
+   * Fetch tag names for a blog (used to update user interests on read)
+   */
+  async getTagsForBlog(blogId: string): Promise<string[]> {
+    try {
+      const result = await query(
+        `SELECT t.name FROM blog_tags bt JOIN tags t ON bt.tag_id = t.id WHERE bt.blog_id = $1`,
+        [blogId]
+      );
+      return result.rows.map((r: any) => r.name);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Seed explicit user interests from the onboarding questionnaire.
+   * Uses weight 2.0 (explicit preference beats inferred 1.0 from reading).
+   */
+  async seedInterests(userId: string, interests: string[]): Promise<void> {
+    for (const tag of interests) {
+      await query(
+        `INSERT INTO user_interests (user_id, tag, weight, updated_at)
+         VALUES ($1, $2, 2.0, NOW())
+         ON CONFLICT (user_id, tag)
+         DO UPDATE SET weight = GREATEST(user_interests.weight, 2.0), updated_at = NOW()`,
+        [userId, tag]
+      );
+    }
+    // Bust cached feed so next request reflects new interests
+    try { await redisClient.del(`feed:${userId}`); } catch { /* cache unavailable */ }
+  }
+
+  /**
+   * Track blog read event and update user interests from the blog's tags
    */
   async trackRead(userId: string, blogId: string, timeSpent: number = 0): Promise<void> {
     await query(
@@ -40,6 +73,13 @@ class RecommendationModel {
        DO UPDATE SET time_spent = reading_history.time_spent + $3, read_at = NOW()`,
       [userId, blogId, timeSpent]
     );
+    // Update interest weights from the blog's tags
+    const tags = await this.getTagsForBlog(blogId);
+    if (tags.length > 0) {
+      await this.updateUserInterests(userId, tags);
+    }
+    // Bust cached feed
+    try { await redisClient.del(`feed:${userId}`); } catch { /* cache unavailable */ }
   }
 
   /**

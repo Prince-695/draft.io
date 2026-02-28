@@ -15,8 +15,8 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    req.userId = decoded.userId;
+    const decoded = jwt.verify(token, JWT_SECRET) as { user_id: string; userId?: string };
+    req.userId = decoded.user_id ?? decoded.userId;
     
     next();
   } catch (error) {

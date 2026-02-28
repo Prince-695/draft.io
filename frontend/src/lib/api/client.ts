@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { API_URL } from '@/utils/constants';
 import { useAuthStore } from '@/stores';
+import { useUIStore } from '@/stores/uiStore';
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
@@ -30,6 +31,13 @@ apiClient.interceptors.request.use(
 // Response interceptor - Handle token refresh and errors
 apiClient.interceptors.response.use(
   (response) => {
+    // Instantly update the AI usage counter whenever a backend AI call returns quota headers.
+    // The gateway exposes these via Access-Control-Expose-Headers so the browser can read them.
+    const used = response.headers['x-ai-requests-used'];
+    const limit = response.headers['x-ai-requests-limit'];
+    if (used !== undefined && limit !== undefined) {
+      useUIStore.getState().setAIUsage(parseInt(used, 10), parseInt(limit, 10));
+    }
     return response;
   },
   async (error: AxiosError) => {
