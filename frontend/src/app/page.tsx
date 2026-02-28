@@ -14,7 +14,8 @@ import {
   MessageSquare,
   BarChart3,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
+  Rss
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -196,7 +197,53 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Stats Section */}
+      {/* Feed Showcase Section */}
+      <section id="feed" className="py-24">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto max-w-5xl">
+            <div className="grid gap-12 md:grid-cols-2 items-center">
+              <div>
+                <div className="mb-4 inline-block rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                  Public Feed
+                </div>
+                <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
+                  Explore Stories from Everyone
+                </h2>
+                <p className="mb-6 text-lg text-muted-foreground">
+                  Browse the public feed to discover posts by category — Technology, Health, Business, Science, and more. No account needed.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link href="/feed">
+                    <Button size="lg" className="gap-2">
+                      <Rss className="h-5 w-5" />
+                      Browse the Feed
+                    </Button>
+                  </Link>
+                  <Link href="/sign-up">
+                    <Button size="lg" variant="outline">
+                      Start Writing
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {['Technology', 'Health', 'Business', 'Science', 'Art', 'Travel'].map((cat) => (
+                  <Link
+                    key={cat}
+                    href={`/feed?category=${cat}`}
+                    className="flex items-center justify-center rounded-xl border-2 border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all p-4 text-sm font-medium"
+                  >
+                    {cat}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}}
       <section className="border-t bg-muted/50 py-24">
         <div className="container mx-auto px-4">
           <div className="grid gap-8 md:grid-cols-4 text-center">
@@ -262,7 +309,7 @@ export default function LandingPage() {
               <h3 className="mb-4 font-semibold">Product</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link href="#features" className="hover:text-foreground">Features</Link></li>
-                <li><Link href="#pricing" className="hover:text-foreground">Pricing</Link></li>
+                <li><Link href="/feed" className="hover:text-foreground">Feed</Link></li>
                 <li><Link href="#" className="hover:text-foreground">Roadmap</Link></li>
               </ul>
             </div>
