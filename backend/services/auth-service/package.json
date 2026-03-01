@@ -26,11 +26,13 @@
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.11.3",
     "swagger-jsdoc": "^6.2.8",
+    "uuid": "^9.0.1",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
+    "@types/uuid": "^9.0.7",
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.11",
     "@types/jsonwebtoken": "^9.0.5",
