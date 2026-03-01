@@ -1,19 +1,20 @@
 'use client';
 
-import { useEffect } from 'react';
-import { mountToaster } from 'gooey-toast';
-import 'gooey-toast/styles.css';
+import { Toaster } from 'sonner';
+import { useTheme } from 'next-themes';
 
 export function GooeyToastProvider() {
-  useEffect(() => {
-    mountToaster({
-      position: 'top-center',
-      options: {
-        // Auto-dismiss after 5 s (was library default ~10 s)
-        duration: 5000,
-      },
-    });
-  }, []);
-
-  return null;
+  const { resolvedTheme } = useTheme();
+  return (
+    <Toaster
+      position="top-center"
+      theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+      duration={5000}
+      closeButton
+      richColors
+      toastOptions={{
+        style: { borderRadius: '6px' },
+      }}
+    />
+  );
 }
