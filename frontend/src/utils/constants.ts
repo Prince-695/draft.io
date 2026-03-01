@@ -43,8 +43,6 @@ export const API_ENDPOINTS = {
     GET_BY_ID: '/api/users/profile/id',
     UPDATE_PROFILE: '/api/users/profile',
     PERSONALIZE: '/api/users/profile/personalize',
-    UPLOAD_AVATAR: '/api/users/profile/avatar',
-    UPLOAD_COVER: '/api/users/profile/cover',
     SEARCH: '/api/users/profile/search/users',
     FOLLOW: '/api/users/follow',
     UNFOLLOW: '/api/users/unfollow',
