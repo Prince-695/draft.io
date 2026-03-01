@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Send, Search, MessageCircle } from 'lucide-react';
 import { useAuthStore, useUIStore, useChatStore } from '@/stores';
-import { socketService } from '@/lib/socket';
+import { getChatSocket } from '@/lib/chatSocketInstance';
 import { userApi } from '@/lib/api/user';
+import { chatApi } from '@/lib/api/chat';
 import type { User as UserType, ChatMessage } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ROUTES } from '@/utils/constants';
@@ -21,11 +22,9 @@ export function MessageSidebar() {
     onlineUsers,
     typingUsers,
     setActiveConversation,
-    setMessages,
+    setConversations,
+    setConversationMessages,
     addMessage,
-    setOnlineUsers,
-    addTypingUser,
-    removeTypingUser,
   } = useChatStore();
 
   const [messageInput, setMessageInput] = useState('');
@@ -33,32 +32,6 @@ export function MessageSidebar() {
   const [searchResults, setSearchResults] = useState<UserType[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Connect socket
-  useEffect(() => {
-    const token = useAuthStore.getState().tokens?.accessToken;
-    if (!token) return;
-
-    const socket = socketService.connect(token);
-
-    socket.on('message:new', (message: ChatMessage) => {
-      addMessage(message);
-    });
-    socket.on('user:online', (userIds: string[]) => {
-      setOnlineUsers(userIds);
-    });
-    socket.on('user:typing', ({ userId }: { userId: string }) => {
-      addTypingUser(userId);
-      setTimeout(() => removeTypingUser(userId), 3000);
-    });
-
-    return () => {
-      socket.off('message:new');
-      socket.off('user:online');
-      socket.off('user:typing');
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -81,22 +54,48 @@ export function MessageSidebar() {
 
   function sendMessage() {
     if (!messageInput.trim() || !activeConversation) return;
-    const outgoing = {
-      sender_id: user?.id ?? '',
-      receiver_id: activeConversation.id,
-      message: messageInput,
-    };
-    socketService.emit('message:send', outgoing);
-    addMessage({ ...outgoing, id: Date.now().toString(), created_at: new Date().toISOString() } as ChatMessage);
+    const socket = getChatSocket();
+    if (!socket?.connected) return;
+    // Backend expects: { receiverId, content }
+    socket.emit('send_message', {
+      receiverId: activeConversation.id,
+      content: messageInput.trim(),
+    });
+    // ChatSocketProvider handles 'message_sent' confirmation and adds to store
     setMessageInput('');
   }
 
-  function startConversation(target: UserType) {
+  async function startConversation(target: UserType) {
     setActiveConversation(target);
-    setMessages([]);
+    setMessageInput('');
     setSearchQuery('');
     setSearchResults([]);
-    socketService.emit('conversation:load', { userId: target.id });
+    // Add to conversations list if not already there
+    const alreadyExists = useChatStore.getState().conversations.some((c) => c.user.id === target.id);
+    if (!alreadyExists) {
+      useChatStore.getState().setConversations([
+        { user: target, unreadCount: 0 },
+        ...useChatStore.getState().conversations,
+      ]);
+    }
+    // Probe online status
+    getChatSocket()?.emit('check_online', { userId: target.id });
+    // Load message history
+    if (!user?.id) return;
+    try {
+      const res = await chatApi.getMessages(target.id);
+      const msgs = (res?.data?.messages ?? []).map((msg: any) => ({
+        id: msg._id?.toString() ?? msg.id ?? '',
+        sender_id: msg.senderId ?? msg.sender_id ?? '',
+        receiver_id: msg.receiverId ?? msg.receiver_id ?? '',
+        conversation_id: msg.conversationId ?? msg.conversation_id ?? '',
+        message: msg.content ?? msg.message ?? '',
+        created_at: msg.createdAt ?? msg.created_at ?? '',
+      }));
+      setConversationMessages(target.id, user.id, msgs);
+    } catch {
+      // ignore — socket messages in store still visible
+    }
   }
 
   const conversationMessages = activeConversation
