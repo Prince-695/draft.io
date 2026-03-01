@@ -1,33 +1,27 @@
 /**
- * Thin wrapper around gooey-toast that:
- * - Caps auto-dismiss at 5 s
- * - Adds a dismiss (✕) button to every toast
+ * Thin wrapper around sonner that keeps the same
+ * { title, description } calling convention used across the app.
  */
-import { toast as _toast, type ToastOptions } from 'gooey-toast';
+import { toast as _toast } from 'sonner';
 
-const DURATION = 5000;
-
-function withDismiss(opts: ToastOptions): ToastOptions {
-  const id = opts.id ?? `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  return {
-    ...opts,
-    id,
-    duration: opts.duration ?? DURATION,
-    button: opts.button ?? {
-      title: '✕',
-      onClick: () => _toast.dismiss(id),
-    },
-  };
+interface ToastOpts {
+  title: string;
+  description?: string;
+  duration?: number;
+  id?: string | number;
 }
 
 export const toast = {
-  show: (opts: ToastOptions) => _toast.show(withDismiss(opts)),
-  success: (opts: ToastOptions) => _toast.success(withDismiss(opts)),
-  error: (opts: ToastOptions) => _toast.error(withDismiss(opts)),
-  warning: (opts: ToastOptions) => _toast.warning(withDismiss(opts)),
-  info: (opts: ToastOptions) => _toast.info(withDismiss(opts)),
-  action: (opts: ToastOptions) => _toast.action(withDismiss(opts)),
+  success: (opts: ToastOpts) =>
+    _toast.success(opts.title, { description: opts.description, duration: opts.duration ?? 5000, id: opts.id }),
+  error: (opts: ToastOpts) =>
+    _toast.error(opts.title, { description: opts.description, duration: opts.duration ?? 5000, id: opts.id }),
+  warning: (opts: ToastOpts) =>
+    _toast.warning(opts.title, { description: opts.description, duration: opts.duration ?? 5000, id: opts.id }),
+  info: (opts: ToastOpts) =>
+    _toast.info(opts.title, { description: opts.description, duration: opts.duration ?? 5000, id: opts.id }),
+  show: (opts: ToastOpts) =>
+    _toast(opts.title, { description: opts.description, duration: opts.duration ?? 5000, id: opts.id }),
   dismiss: _toast.dismiss,
-  clear: _toast.clear,
   promise: _toast.promise,
 } as const;

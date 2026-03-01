@@ -9,7 +9,6 @@ import authRoutes from './routes/auth.routes';
 import oauthRoutes from './routes/oauth.routes';
 import pool from './config/database';
 import redis from './config/redis';
-// Kafka removed
 import passport from './config/passport';
 import { swaggerSpec } from './config/swagger';
 

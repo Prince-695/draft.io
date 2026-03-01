@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { LandingNavbar } from '@/components/LandingNavbar';
@@ -76,7 +76,7 @@ async function fetchPublicBlogs(params: {
   return { blogs: sliced, count: blogs.length };
 }
 
-export default function PublicFeedPage() {
+function FeedContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get('category') ?? 'All';
@@ -346,5 +346,13 @@ function BlogCard({ blog }: { blog: Blog }) {
         </div>
       </div>
     </article>
+  );
+}
+
+export default function PublicFeedPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" /></div>}>
+      <FeedContent />
+    </Suspense>
   );
 }

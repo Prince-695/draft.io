@@ -4,13 +4,14 @@ const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
 const REDIS_PORT = Number(process.env.REDIS_PORT) || 6379;
 const REDIS_PASSWORD = process.env.REDIS_PASSWORD || '';
 
-const redisClient = createClient({
-  socket: {
-    host: REDIS_HOST,
-    port: REDIS_PORT,
-  },
-  password: REDIS_PASSWORD || undefined,
-});
+const redisClient = createClient(
+  process.env.REDIS_URL
+    ? { url: process.env.REDIS_URL }
+    : {
+        socket: { host: REDIS_HOST, port: REDIS_PORT },
+        password: REDIS_PASSWORD || undefined,
+      }
+);
 
 redisClient.on('error', (err) => {
   console.error('❌ Redis Client Error:', err);

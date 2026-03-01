@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores';
 import { authApi } from '@/lib/api/auth';
 import { ROUTES } from '@/utils/constants';
+import { toast } from '@/utils/toast';
 import type { User } from '@/types';
 
 function LoadingSpinner() {
@@ -30,6 +31,7 @@ function AuthCallbackInner() {
 
     const token = searchParams.get('token');
     const error = searchParams.get('error');
+    const status = searchParams.get('status'); // 'new' | 'linked'
 
     async function handleCallback() {
       if (error || !token) {
@@ -48,6 +50,15 @@ function AuthCallbackInner() {
         const user: User | undefined = res?.data;
         if (!user?.id) throw new Error('No user data');
         login(user, { accessToken: token, refreshToken: '' });
+
+        if (status === 'new') {
+          toast.success({ title: 'Welcome to Draft.IO!', description: 'Your account has been created with Google.' });
+        } else if (status === 'linked') {
+          toast.success({ title: 'Google account linked!', description: 'You can now sign in with Google or your password.' });
+        } else {
+          toast.success({ title: 'Welcome back!', description: 'Signed in with Google.' });
+        }
+
         router.replace(ROUTES.DASHBOARD);
       } catch {
         useAuthStore.setState((state) => ({ ...state, tokens: null }));

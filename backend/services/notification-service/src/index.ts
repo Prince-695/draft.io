@@ -1,5 +1,4 @@
 // Notification Service - Real-time notifications with WebSocket
-// Consumes Kafka events and sends real-time notifications to connected users
 
 import express, { Request, Response } from 'express';
 import { createServer } from 'http';
@@ -11,7 +10,6 @@ import redis from './config/redis';
 import notificationRoutes from './routes/notification.routes';
 import { initDatabase } from './models/notification.model';
 import { setupSocketHandlers } from './controllers/socket.controller';
-// Kafka removed
 
 dotenv.config();
 

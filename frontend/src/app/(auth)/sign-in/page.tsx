@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SignInFormData, signInSchema } from '@/lib/validations/auth';
@@ -23,10 +23,29 @@ import { getErrorMessage } from '@/utils/helpers';
 import { toast } from '@/utils/toast';
 
 export default function SignInPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-background" />}>
+      <SignInContent />
+    </Suspense>
+  );
+}
+
+function SignInContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState<string | null>(null);
   const { mutate: login, isPending } = useLogin();
+
+  useEffect(() => {
+    const err = searchParams.get('error');
+    if (err === 'oauth_failed') {
+      toast.error({ title: 'Google sign-in failed', description: 'Something went wrong. Please try again or use your email and password.' });
+    } else if (err === 'oauth_not_configured') {
+      toast.error({ title: 'Google sign-in unavailable', description: 'Google login is not configured on this server.' });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const {
     register,

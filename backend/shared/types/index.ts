@@ -84,42 +84,6 @@ export interface Bookmark {
 }
 
 // ============================================
-// KAFKA EVENT TYPES
-// ============================================
-
-export interface KafkaEvent<T = any> {
-  event_type: string;
-  timestamp: Date;
-  data: T;
-}
-
-export interface UserRegisteredEvent {
-  user_id: string;
-  email: string;
-  username: string;
-}
-
-export interface BlogPublishedEvent {
-  blog_id: string;
-  user_id: string;
-  title: string;
-  tags: string[];
-  category: string;
-}
-
-export interface UserFollowedEvent {
-  follower_id: string;
-  following_id: string;
-}
-
-export interface EngagementCreatedEvent {
-  type: 'like' | 'comment' | 'share';
-  user_id: string;
-  blog_id: string;
-  comment_id?: string;
-}
-
-// ============================================
 // API RESPONSE TYPES
 // ============================================
 

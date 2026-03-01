@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import * as FollowModel from '../models/follow.model';
-import { publishEvent, EventType } from '../../../../shared/events';
+
 
 export const followUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -22,17 +22,6 @@ export const followUser = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     const follow = await FollowModel.followUser(followerId, userId);
-
-    // Publish Kafka event
-    try {
-      await publishEvent(EventType.USER_FOLLOWED, {
-        followerId,
-        followingId: userId,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (kafkaError) {
-      console.error('Failed to publish user.followed event:', kafkaError);
-    }
 
     res.json({
       success: true,
@@ -58,17 +47,6 @@ export const unfollowUser = async (req: AuthRequest, res: Response): Promise<voi
     if (!success) {
       res.status(404).json({ success: false, error: 'Follow relationship not found' });
       return;
-    }
-
-    // Publish Kafka event
-    try {
-      await publishEvent(EventType.USER_UNFOLLOWED, {
-        followerId,
-        followingId: userId,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (kafkaError) {
-      console.error('Failed to publish user.unfollowed event:', kafkaError);
     }
 
     res.json({

@@ -1,2 +1,17 @@
 docs/
 
+# Environment files — never commit secrets
+.env
+.env.local
+.env.production
+backend/services/**/.env
+frontend/.env.local
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+.next/
+

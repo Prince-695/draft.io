@@ -12,7 +12,7 @@ import {
   deleteRefreshToken,
   generateRandomToken,
 } from '../utils/jwt.util';
-import { publishEvent, EventType } from '../../../../shared/events';
+
 
 /**
  * REGISTER - Create a new user account
@@ -71,20 +71,7 @@ export const register = async (req: Request, res: Response) => {
       console.warn('⚠️  Could not store refresh token in Redis (non-fatal):', err?.message)
     );
 
-    // 8. Publish "user.registered" event to Kafka
-    try {
-      await publishEvent(EventType.USER_REGISTERED, {
-        userId: user.id,
-        email: user.email,
-        username: user.username,
-        fullName: user.full_name,
-      });
-    } catch (kafkaError) {
-      console.error('Failed to publish user.registered event:', kafkaError);
-      // Don't fail registration if Kafka is down
-    }
-
-    // 9. Return success response
+    // 8. Return success response
     return res.status(201).json({
       success: true,
       message: 'Registration successful! Please verify your email.',
@@ -130,6 +117,12 @@ export const login = async (req: Request, res: Response) => {
     }
 
     // 2. Compare password with stored hash
+    if (!user.password_hash) {
+      return res.status(401).json({
+        success: false,
+        error: 'This account was created with Google. Please sign in with Google.',
+      });
+    }
     const isPasswordValid = await comparePassword(password, user.password_hash);
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -308,7 +301,7 @@ export const getMe = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       success: true,
-      data: { user },
+      data: user,
     });
   } catch (error) {
     console.error('Get me error:', error);

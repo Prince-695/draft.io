@@ -3,7 +3,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { initDB } from './config/database';
 import { connectRedis } from './config/redis';
-// Kafka removed
 import recommendationRoutes from './routes/recommendation.routes';
 
 dotenv.config();
