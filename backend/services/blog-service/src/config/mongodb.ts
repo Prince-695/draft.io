@@ -1,6 +1,6 @@
 import { MongoClient, Db } from 'mongodb';
 
-const uri = process.env.MONGO_URI || 'mongodb://localhost:27017';
+const uri = process.env.MONGO_URL || process.env.MONGO_URI || 'mongodb://localhost:27017';
 const dbName = process.env.MONGO_DB_NAME || 'draftio';
 
 let mongoClient: MongoClient;
