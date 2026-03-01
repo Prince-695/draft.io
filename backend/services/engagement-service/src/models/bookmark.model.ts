@@ -37,11 +37,10 @@ export const getUserBookmarks = async (userId: string, limit = 20, offset = 0) =
        u.id        AS author_id,
        u.username  AS author_username,
        u.full_name AS author_full_name,
-       up.avatar_url AS author_avatar
+       NULL AS author_avatar
      FROM bookmarks bm
      JOIN blogs b ON b.id = bm.blog_id
      LEFT JOIN users u  ON u.id = b.author_id
-     LEFT JOIN user_profiles up ON up.user_id = b.author_id
      WHERE bm.user_id = $1
      ORDER BY bm.created_at DESC
      LIMIT $2 OFFSET $3`,

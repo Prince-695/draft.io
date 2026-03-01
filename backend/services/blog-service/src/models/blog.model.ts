@@ -84,10 +84,9 @@ export const getBlogById = async (blogId: string): Promise<{ blog: Blog & { auth
             u.id         AS _author_id,
             u.username   AS _author_username,
             u.full_name  AS _author_full_name,
-            up.avatar_url AS _author_avatar
+            NULL AS _author_avatar
      FROM blogs b
      LEFT JOIN users u         ON u.id = b.author_id
-     LEFT JOIN user_profiles up ON up.user_id = b.author_id
      WHERE ${whereClause}`,
     [blogId]
   );
@@ -294,8 +293,7 @@ export const getPublishedBlogs = async (
         'id', u.id,
         'username', u.username,
         'full_name', u.full_name,
-        'email', u.email,
-        'avatar_url', up.avatar_url
+        'email', u.email
       ) as author,
       COALESCE(
         (SELECT json_agg(t.name)
@@ -306,7 +304,6 @@ export const getPublishedBlogs = async (
       ) as tags
      FROM blogs b
      LEFT JOIN users u ON b.author_id = u.id
-     LEFT JOIN user_profiles up ON u.id = up.user_id
      WHERE b.status = 'published'
      ORDER BY b.published_at DESC
      LIMIT $1 OFFSET $2`,

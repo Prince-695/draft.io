@@ -36,8 +36,6 @@ CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_token);
 CREATE TABLE IF NOT EXISTS user_profiles (
   user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   bio TEXT,
-  avatar_url TEXT,
-  cover_image_url TEXT,
   location VARCHAR(255),
   website VARCHAR(255),
   twitter_handle VARCHAR(100),

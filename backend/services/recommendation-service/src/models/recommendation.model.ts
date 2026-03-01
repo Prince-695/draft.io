@@ -238,10 +238,9 @@ class RecommendationModel {
     }
 
     const blogsResult = await query(
-      `SELECT b.*, u.username, u.full_name, COALESCE(up.avatar_url, '') as avatar_url
+      `SELECT b.*, u.username, u.full_name
        FROM blogs b
        LEFT JOIN users u ON b.author_id = u.id
-       LEFT JOIN user_profiles up ON b.author_id = up.user_id
        WHERE b.id = ANY($1)`,
       
       [sortedBlogIds]
@@ -284,19 +283,18 @@ class RecommendationModel {
     }
 
     const result = await query(
-      `SELECT b.*, u.username, u.full_name, COALESCE(up.avatar_url, '') as avatar_url,
+      `SELECT b.*, u.username, u.full_name,
               COUNT(DISTINCT l.user_id) as like_count,
               COUNT(DISTINCT c.id) as comment_count,
               (COUNT(DISTINCT l.user_id) + COUNT(DISTINCT c.id) * 2) / 
               (EXTRACT(EPOCH FROM (NOW() - b.published_at)) / 3600 + 2) as trending_score
        FROM blogs b
        LEFT JOIN users u ON b.author_id = u.id
-       LEFT JOIN user_profiles up ON b.author_id = up.user_id
        LEFT JOIN likes l ON b.id = l.blog_id
        LEFT JOIN comments c ON b.id = c.blog_id
        WHERE b.published_at > NOW() - INTERVAL '7 days'
        AND b.status = 'published'
-       GROUP BY b.id, u.id, up.user_id
+       GROUP BY b.id, u.id
        ORDER BY trending_score DESC
        LIMIT $1`,
       [limit]
@@ -331,17 +329,16 @@ class RecommendationModel {
 
     // Find blogs with matching tags
     const result = await query(
-      `SELECT b.*, u.username, u.full_name, COALESCE(up.avatar_url, '') as avatar_url,
+      `SELECT b.*, u.username, u.full_name,
               COUNT(DISTINCT t.name) as matching_tags
        FROM blogs b
        LEFT JOIN users u ON b.author_id = u.id
-       LEFT JOIN user_profiles up ON b.author_id = up.user_id
        INNER JOIN blog_tags bt ON b.id = bt.blog_id
        INNER JOIN tags t ON bt.tag_id = t.id
        WHERE t.name = ANY($1)
        AND b.id != $2
        AND b.status = 'published'
-       GROUP BY b.id, u.id, up.user_id
+       GROUP BY b.id, u.id
        ORDER BY matching_tags DESC
        LIMIT $3`,
       [tags, blogId, limit]
@@ -358,11 +355,10 @@ class RecommendationModel {
    */
   async getReadingHistory(userId: string, limit: number = 20): Promise<any[]> {
     const result = await query(
-      `SELECT b.*, u.username, u.full_name, COALESCE(up.avatar_url, '') as avatar_url, rh.read_at, rh.time_spent
+      `SELECT b.*, u.username, u.full_name, rh.read_at, rh.time_spent
        FROM reading_history rh
        JOIN blogs b ON rh.blog_id = b.id
        LEFT JOIN users u ON b.author_id = u.id
-       LEFT JOIN user_profiles up ON b.author_id = up.user_id
        WHERE rh.user_id = $1
        ORDER BY rh.read_at DESC
        LIMIT $2`,

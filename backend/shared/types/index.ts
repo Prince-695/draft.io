@@ -19,7 +19,6 @@ export interface User {
 export interface UserProfile {
   user_id: string;
   bio?: string;
-  cover_image_url?: string;
   interests: string[];  // ['Technology', 'AI', 'Lifestyle']
   expertise_tags: string[];  // ['JavaScript', 'React', 'Node.js']
   created_at: Date;

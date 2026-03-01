@@ -33,7 +33,7 @@ export const getFollowers = async (userId: string, limit = 20, offset = 0): Prom
   const query = `
     SELECT 
       u.id, u.username, u.full_name,
-      up.avatar_url, up.bio, up.followers_count,
+      up.bio, up.followers_count,
       f.created_at as followed_at
     FROM follows f
     JOIN users u ON f.follower_id = u.id
@@ -50,7 +50,7 @@ export const getFollowing = async (userId: string, limit = 20, offset = 0): Prom
   const query = `
     SELECT 
       u.id, u.username, u.full_name,
-      up.avatar_url, up.bio, up.followers_count,
+      up.bio, up.followers_count,
       f.created_at as followed_at
     FROM follows f
     JOIN users u ON f.following_id = u.id

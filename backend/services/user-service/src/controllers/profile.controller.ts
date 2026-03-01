@@ -32,7 +32,7 @@ export const getProfileById = async (req: AuthRequest, res: Response): Promise<v
 
     const result = await db.query(
       `SELECT u.id, u.username, u.email, u.full_name, u.is_verified, u.created_at,
-              p.bio, p.avatar_url, p.cover_image_url, p.location, p.website,
+              p.bio, p.location, p.website,
               p.twitter_handle, p.linkedin_url, p.github_url,
               p.interests, p.expertise_tags, p.writing_goals, p.experience_level,
               p.followers_count, p.following_count
@@ -62,7 +62,7 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<void>
     // JOIN users + user_profiles in one query
     const result = await db.query(
       `SELECT u.id, u.username, u.email, u.full_name, u.is_verified, u.created_at,
-              p.bio, p.avatar_url, p.cover_image_url, p.location, p.website,
+              p.bio, p.location, p.website,
               p.twitter_handle, p.linkedin_url, p.github_url,
               p.interests, p.expertise_tags, p.writing_goals, p.experience_level,
               p.followers_count, p.following_count
@@ -98,7 +98,7 @@ export const getMyProfile = async (req: AuthRequest, res: Response): Promise<voi
     // Return full joined data
     const result = await db.query(
       `SELECT u.id, u.username, u.email, u.full_name, u.is_verified, u.created_at,
-              p.bio, p.avatar_url, p.cover_image_url, p.location, p.website,
+              p.bio, p.location, p.website,
               p.twitter_handle, p.linkedin_url, p.github_url,
               p.interests, p.expertise_tags, p.writing_goals, p.experience_level,
               p.followers_count, p.following_count
