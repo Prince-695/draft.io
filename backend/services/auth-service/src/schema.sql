@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email VARCHAR(255) UNIQUE NOT NULL,
   username VARCHAR(50) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,  -- Encrypted password (never store plain text!)
+  password_hash VARCHAR(255),  -- Encrypted password (null for OAuth-only users)
   full_name VARCHAR(100),
   
   -- Email verification

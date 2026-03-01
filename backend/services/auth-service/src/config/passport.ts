@@ -26,8 +26,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         );
 
         if (existingUserQuery.rows.length > 0) {
-          // User exists, return user
-          return done(null, existingUserQuery.rows[0]);
+          // Returning OAuth user
+          return done(null, { ...existingUserQuery.rows[0], _oauthStatus: 'returning' });
         }
 
         // Check if email already exists (user signed up with email/password)
@@ -39,13 +39,13 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           );
 
           if (emailUserQuery.rows.length > 0) {
-            // Link Google account to existing user
+            // Link Google account to existing email/password user
             const user = emailUserQuery.rows[0];
             await pool.query(
               'UPDATE users SET google_id = $1, updated_at = NOW() WHERE id = $2',
               [profile.id, user.id]
             );
-            return done(null, user);
+            return done(null, { ...user, _oauthStatus: 'linked' });
           }
         }
 
@@ -54,20 +54,16 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         const fullName = profile.displayName || 'Google User';
 
         const newUserQuery = await pool.query(
-          `INSERT INTO users (id, email, username, full_name, google_id, email_verified, created_at, updated_at)
+          `INSERT INTO users (id, email, username, full_name, google_id, is_verified, created_at, updated_at)
            VALUES ($1, $2, $3, $4, $5, true, NOW(), NOW())
            RETURNING *`,
           [uuidv4(), email, username, fullName, profile.id]
         );
 
         const newUser = newUserQuery.rows[0];
-        
-        // Publish USER_REGISTERED event (import will be added in controller)
-        // This will be handled after passport initialization
-        
-        return done(null, newUser);
-      } catch (error) {
-        console.error('Google OAuth error:', error);
+        return done(null, { ...newUser, _oauthStatus: 'new' });
+      } catch (error: any) {
+        console.error('Google OAuth error:', error?.message, error?.detail, error);
         return done(error as Error, undefined);
       }
     }
