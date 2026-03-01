@@ -8,7 +8,7 @@ import { formatDate } from '@/utils/helpers';
 import { ROUTES } from '@/utils/constants';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
   Heart, MessageCircle, Eye, PenSquare, UserPlus, UserCheck,
@@ -105,12 +105,8 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto">
-        {/* Cover Image */}
-        <div className="relative h-64 bg-gradient-to-r from-primary to-primary/60 overflow-hidden">
-          {profile.cover_image_url ? (
-            <Image src={profile.cover_image_url} alt="Cover" fill className="object-cover" />
-          ) : null}
-        </div>
+        {/* Cover Banner */}
+        <div className="relative h-48 bg-gradient-to-r from-primary to-primary/60" />
 
         {/* Profile Info */}
         <Card className="-mt-16 relative z-10 mx-4">
@@ -119,7 +115,6 @@ export default function ProfilePage({ params }: ProfilePageProps) {
               {/* Avatar */}
               <div className="shrink-0">
                 <Avatar className="w-32 h-32 border-4 border-background shadow-lg">
-                  <AvatarImage src={profile.profile_picture_url} alt={profile.full_name || username} />
                   <AvatarFallback className="text-4xl">
                     {username.charAt(0).toUpperCase()}
                   </AvatarFallback>

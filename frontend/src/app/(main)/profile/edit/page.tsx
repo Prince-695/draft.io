@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import Image from 'next/image';
 import { useAuthStore } from '@/stores';
 import { ROUTES, API_ENDPOINTS } from '@/utils/constants';
 import apiClient from '@/lib/api/client';
@@ -14,8 +13,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { AlertCircle, Home } from 'lucide-react';
+import { toast } from '@/utils/toast';
 
 const profileSchema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -32,8 +32,6 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 export default function EditProfilePage() {
   const router = useRouter();
   const { user, updateUser } = useAuthStore();
-  const [avatarPreview, setAvatarPreview] = useState((user as any)?.avatar_url || user?.profile_picture_url || '');
-  const [coverPreview, setCoverPreview] = useState((user as any)?.cover_image || user?.cover_image_url || '');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -50,30 +48,6 @@ export default function EditProfilePage() {
     },
   });
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-      // TODO: Upload to Cloudinary
-    }
-  };
-
-  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCoverPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-      // TODO: Upload to Cloudinary
-    }
-  };
-
   const onSubmit = async (data: ProfileFormData) => {
     try {
       setSaveError(null);
@@ -83,11 +57,9 @@ export default function EditProfilePage() {
         bio: data.bio?.trim() || undefined,
         location: data.location?.trim() || undefined,
         website: data.website?.trim() || undefined,
-        // Strip leading @ from twitter handle; skip if empty
         twitter_handle: data.twitter?.trim()
           ? data.twitter.trim().replace(/^@/, '')
           : undefined,
-        // Accept raw username or full URL for github/linkedin
         github_url: data.github?.trim() || undefined,
         linkedin_url: data.linkedin?.trim() || undefined,
       });
@@ -95,6 +67,7 @@ export default function EditProfilePage() {
         full_name: data.full_name,
         bio: data.bio,
       });
+      toast.success({ title: 'Profile saved!' });
       const username = user?.username;
       if (username) {
         router.push(`${ROUTES.PROFILE}/${username}`);
@@ -143,68 +116,26 @@ export default function EditProfilePage() {
           </Button>
         </div>
 
+        {/* User card */}
+        <div className="flex items-center gap-4 mb-6 p-4 rounded-xl bg-muted/40 border">
+          <Avatar className="w-16 h-16">
+            <AvatarFallback className="text-2xl font-semibold">
+              {user?.username?.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="font-semibold text-lg">{user?.full_name || user?.username}</p>
+            <p className="text-sm text-muted-foreground">@{user?.username}</p>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Cover Image */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">Cover Image</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="relative h-48 bg-muted rounded-lg overflow-hidden">
-                {coverPreview ? (
-                  <Image
-                    src={coverPreview}
-                    alt="Cover"
-                    fill
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
-                    No cover image
-                  </div>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleCoverChange}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">Click to upload (max 5MB)</p>
-            </CardContent>
-          </Card>
-
-          {/* Avatar */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">Profile Picture</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4">
-                <div className="relative cursor-pointer">
-                  <Avatar className="w-24 h-24">
-                    <AvatarImage src={avatarPreview} alt="Avatar" />
-                    <AvatarFallback className="text-2xl">
-                      {user?.username?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                  />
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Click to upload new avatar
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Basic Info */}
           <Card>
-            <CardContent className="pt-6 space-y-4">
+            <CardHeader>
+              <CardTitle>Basic Information</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="full_name">Full Name *</Label>
                 <Input

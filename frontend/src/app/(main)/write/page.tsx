@@ -374,8 +374,18 @@ function WritePageInner() {
             type="url"
             value={coverImage}
             onChange={(e) => setCoverImage(e.target.value)}
-            placeholder="https://example.com/image.jpg"
+            placeholder="https://images.unsplash.com/photo-..."
           />
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Paste an image URL from:{' '}
+            <a href="https://unsplash.com" target="_blank" rel="noreferrer" className="text-primary hover:underline">Unsplash</a>
+            {', '}
+            <a href="https://www.pexels.com" target="_blank" rel="noreferrer" className="text-primary hover:underline">Pexels</a>
+            {', '}
+            <a href="https://res.cloudinary.com" target="_blank" rel="noreferrer" className="text-primary hover:underline">Cloudinary</a>
+            {', or '}
+            <a href="https://github.com" target="_blank" rel="noreferrer" className="text-primary hover:underline">GitHub</a>
+          </p>
           {coverImage && (
             <div className="mt-4 relative h-64 bg-muted rounded-lg overflow-hidden">
               <img
