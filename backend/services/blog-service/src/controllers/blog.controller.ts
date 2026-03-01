@@ -7,7 +7,6 @@ import * as analyticsModel from '../models/analytics.model';
 import { generateSlug, generateUniqueSlug } from '../utils/slug.util';
 import pool from '../config/database';
 import { getDB } from '../config/mongodb';
-import { publishEvent, EventType } from '../../../../shared/events'; // no-op stubs
 
 // Create new blog
 export const createBlog = async (req: AuthRequest, res: Response): Promise<void> => {

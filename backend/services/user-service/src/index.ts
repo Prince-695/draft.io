@@ -8,7 +8,6 @@ import pool from './config/database';
 import redis from './config/redis';
 import profileRoutes from './routes/profile.routes';
 import followRoutes from './routes/follow.routes';
-// Kafka removed
 import { swaggerSpec } from './config/swagger';
 
 dotenv.config();

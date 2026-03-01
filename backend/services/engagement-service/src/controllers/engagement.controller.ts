@@ -3,7 +3,6 @@ import { AuthRequest } from '../middleware/auth.middleware';
 import * as likeModel from '../models/like.model';
 import * as commentModel from '../models/comment.model';
 import * as bookmarkModel from '../models/bookmark.model';
-import { publishEvent, EventType } from '../../../../shared/events'; // no-op stubs
 
 // Like endpoints
 export const likeBlog = async (req: AuthRequest, res: Response) => {
