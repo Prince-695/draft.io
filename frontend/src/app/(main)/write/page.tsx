@@ -12,7 +12,6 @@ import {
   useGrammarCheck, 
   useSEOSuggestions 
 } from '@/hooks/useAI';
-import { useUIStore } from '@/stores/uiStore';
 import { useCreateBlog, usePublishBlog, useUpdateBlog } from '@/hooks/useBlog';
 import { blogApi } from '@/lib/api';
 import { getErrorMessage } from '@/utils/helpers';
@@ -43,7 +42,6 @@ function WritePageInner() {
   const { mutate: improveContent, isPending: isImproving } = useImproveContent();
   const { mutate: checkGrammar, isPending: isCheckingGrammar } = useGrammarCheck();
   const { mutate: getSEO, isPending: isGettingSEO } = useSEOSuggestions();
-  const incrementAIUsage = useUIStore((s) => s.incrementAIUsage);
 
   // Blog mutation hooks
   const createBlogMutation = useCreateBlog();
@@ -51,6 +49,8 @@ function WritePageInner() {
   const updateBlogMutation = useUpdateBlog();
   const [isSaving, setIsSaving] = useState(false);
   const [savedBlogId, setSavedBlogId] = useState<string | null>(editId); // tracks autosaved draft id
+  const savedBlogIdRef = useRef<string | null>(editId); // ref copy for use inside autosave closure
+  const _setSavedBlogId = (id: string | null) => { savedBlogIdRef.current = id; setSavedBlogId(id); };
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -87,9 +87,9 @@ function WritePageInner() {
     autoSaveTimerRef.current = setTimeout(async () => {
       setAutoSaveStatus('saving');
       try {
-        if (savedBlogId) {
+        if (savedBlogIdRef.current) {
           await updateBlogMutation.mutateAsync({
-            id: savedBlogId,
+            id: savedBlogIdRef.current,
             data: { title, content, tags, cover_image_url: coverImage || undefined, status: 'draft' },
           });
         } else if (title.trim()) {
@@ -100,7 +100,7 @@ function WritePageInner() {
             cover_image_url: coverImage || undefined,
             status: 'draft',
           });
-          if (res?.data?.id) setSavedBlogId(res.data.id);
+          if (res?.data?.id) _setSavedBlogId(res.data.id);
         }
         setAutoSaveStatus('saved');
       } catch {
@@ -116,6 +116,8 @@ function WritePageInner() {
   const handleSave = async () => {
     if (!title.trim()) { setError('Title is required'); return; }
     if (!content.trim()) { setError('Content is required'); return; }
+    // Cancel any pending autosave so it doesn't create a duplicate after we save
+    if (autoSaveTimerRef.current) { clearTimeout(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
     setIsSaving(true);
     setError(null);
     try {
@@ -128,7 +130,7 @@ function WritePageInner() {
         const res = await createBlogMutation.mutateAsync({
           title, content, tags, cover_image_url: coverImage || undefined, status: 'draft',
         });
-        if (res?.data?.id) setSavedBlogId(res.data.id);
+        if (res?.data?.id) _setSavedBlogId(res.data.id);
       }
       setAutoSaveStatus('saved');
       router.push(ROUTES.DASHBOARD);
@@ -142,6 +144,8 @@ function WritePageInner() {
   const handlePublish = async () => {
     if (!title.trim()) { setError('Title is required'); return; }
     if (!content.trim()) { setError('Content is required'); return; }
+    // Cancel any pending autosave so it doesn't create a duplicate after we publish
+    if (autoSaveTimerRef.current) { clearTimeout(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
     setIsSaving(true);
     setError(null);
     try {
@@ -158,7 +162,7 @@ function WritePageInner() {
           title, content, tags, cover_image_url: coverImage || undefined, status: 'published',
         });
         blogId = res?.data?.id ?? null;
-        if (blogId) setSavedBlogId(blogId);
+        if (blogId) _setSavedBlogId(blogId);
       }
       // Explicitly publish via the publish endpoint (blog service may require it)
       if (blogId) {
@@ -200,7 +204,6 @@ function WritePageInner() {
             { prompt, context: content },
             {
               onSuccess: (response) => {
-                incrementAIUsage();
                 if (response.data?.result) {
                   // Convert AI markdown to HTML before inserting into TipTap
                   const html = marked.parse(response.data.result) as string;
@@ -224,7 +227,6 @@ function WritePageInner() {
             { content, instructions: prompt || undefined, conversationHistory: aiHistory },
             {
               onSuccess: (response) => {
-                incrementAIUsage();
                 if (response.data?.result) {
                   const html = marked.parse(response.data.result) as string;
                   setContent(html);
@@ -252,7 +254,6 @@ function WritePageInner() {
             { content, instructions: prompt || undefined, conversationHistory: aiHistory },
             {
               onSuccess: (response) => {
-                incrementAIUsage();
                 if (response.data?.result) {
                   const html = marked.parse(response.data.result) as string;
                   setContent(html);
@@ -280,7 +281,6 @@ function WritePageInner() {
             { title, content },
             {
               onSuccess: (response) => {
-                incrementAIUsage();
                 console.log('SEO Suggestions:', response.data?.suggestions);
                 // You could show these in a modal or side panel
               },
