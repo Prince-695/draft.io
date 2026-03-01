@@ -1,4 +1,4 @@
-// Event Types for Kafka Messaging
+// Event Types for inter-service communication
 
 export enum EventType {
   // Auth Events
