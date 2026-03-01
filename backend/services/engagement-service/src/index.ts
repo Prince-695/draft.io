@@ -45,7 +45,8 @@ const initDatabase = async () => {
   try {
     console.log('🔧 Initializing database...');
     
-    await pool.connect();
+    const pgClient = await pool.connect();
+    pgClient.release();
     console.log('✅ PostgreSQL connected');
     
     const schemaPath = path.join(__dirname, 'schema.sql');
