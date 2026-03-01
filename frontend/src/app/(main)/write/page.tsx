@@ -100,7 +100,7 @@ function WritePageInner() {
             cover_image_url: coverImage || undefined,
             status: 'draft',
           });
-          if (res?.data?.blog?.id) setSavedBlogId(res.data.blog.id);
+          if (res?.data?.id) setSavedBlogId(res.data.id);
         }
         setAutoSaveStatus('saved');
       } catch {
@@ -128,7 +128,7 @@ function WritePageInner() {
         const res = await createBlogMutation.mutateAsync({
           title, content, tags, cover_image_url: coverImage || undefined, status: 'draft',
         });
-        if (res?.data?.blog?.id) setSavedBlogId(res.data.blog.id);
+        if (res?.data?.id) setSavedBlogId(res.data.id);
       }
       setAutoSaveStatus('saved');
       router.push(ROUTES.DASHBOARD);
@@ -152,12 +152,12 @@ function WritePageInner() {
           id: blogId,
           data: { title, content, tags, cover_image_url: coverImage || undefined, status: 'published' },
         });
-        blogId = res?.data?.blog?.id || blogId;
+        blogId = res?.data?.id || blogId;
       } else {
         const res = await createBlogMutation.mutateAsync({
           title, content, tags, cover_image_url: coverImage || undefined, status: 'published',
         });
-        blogId = res?.data?.blog?.id ?? null;
+        blogId = res?.data?.id ?? null;
         if (blogId) setSavedBlogId(blogId);
       }
       // Explicitly publish via the publish endpoint (blog service may require it)
@@ -230,8 +230,8 @@ function WritePageInner() {
                   setContent(html);
                   setAiHistory((prev) => [
                     ...prev,
-                    { role: 'user', content: prompt || 'Improve this content' },
-                    { role: 'assistant', content: response.data!.result! },
+                    { role: 'user' as const, content: prompt || 'Improve this content' },
+                    { role: 'assistant' as const, content: response.data!.result! },
                   ].slice(-4));
                 }
               },
@@ -258,8 +258,8 @@ function WritePageInner() {
                   setContent(html);
                   setAiHistory((prev) => [
                     ...prev,
-                    { role: 'user', content: prompt || 'Check and fix grammar' },
-                    { role: 'assistant', content: response.data!.result! },
+                    { role: 'user' as const, content: prompt || 'Check and fix grammar' },
+                    { role: 'assistant' as const, content: response.data!.result! },
                   ].slice(-4));
                 }
               },

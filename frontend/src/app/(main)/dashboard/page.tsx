@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores';
 import { ROUTES } from '@/utils/constants';
@@ -11,21 +11,21 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Heart, MessageCircle, Eye, PenSquare, User, Sparkles, X } from 'lucide-react';
-import { useBlogs, useMyBlogs, useRecommendedFeed } from '@/hooks/useBlog';
+import { Heart, MessageCircle, Eye, PenSquare, User, Sparkles, X, Loader2 } from 'lucide-react';
+import { useMyBlogs, useRecommendedFeed, useInfiniteBlogs } from '@/hooks/useBlog';
 import { useFollowUser, useUnfollowUser, useFollowing } from '@/hooks/useUser';
 import { userApi } from '@/lib/api/user';
 import { BlogPostCard } from '@/components/BlogPostCard';
 
-const Dashboard = () => {
+const DashboardContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuthStore();
   const [filter, setFilter] = useState<'all' | 'following' | 'mine'>('all');
-  const [page, setPage] = useState(1);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
   const [showAllInterests, setShowAllInterests] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Initialize filter from URL params
   useEffect(() => {
@@ -45,12 +45,12 @@ const Dashboard = () => {
     }
   }, [followingData]);
 
-  // Fetch suggested users
+  // Fetch suggested users — top writers you don't already follow, sorted by follower count
   useEffect(() => {
     const fetchSuggestedUsers = async () => {
       try {
-        // Try multiple common letters to get diverse suggestions
-        const queries = ['a', 'e', 'i'];
+        // Cast a wide net with common letters to get a diverse pool of users
+        const queries = ['a', 'e', 'i', 'o', 's', 't'];
         let allUsers: any[] = [];
         for (const q of queries) {
           try {
@@ -62,7 +62,7 @@ const Dashboard = () => {
             // ignore individual failures
           }
         }
-        // Deduplicate, remove self, take first 3
+        // Deduplicate by id, remove self, sort by followers_count desc, keep top 10 buffer
         const seen = new Set<string>();
         const suggested = allUsers
           .filter((u: any) => {
@@ -70,21 +70,46 @@ const Dashboard = () => {
             seen.add(u.id);
             return true;
           })
-          .slice(0, 3);
+          .sort((a: any, b: any) => (b.followers_count ?? 0) - (a.followers_count ?? 0))
+          .slice(0, 10); // keep buffer so we can filter out already-followed in render
         setSuggestedUsers(suggested);
       } catch (error) {
         console.error('Failed to fetch suggested users:', error);
       }
     };
-    if (user?.id) {
-      fetchSuggestedUsers();
-    }
+    if (user?.id) fetchSuggestedUsers();
   }, [user?.id]);
 
-  // Fetch blogs based on filter
-  const { data: allBlogsData, isLoading: loadingAllBlogs } = useBlogs(page, 10);
-  const { data: myBlogsData, isLoading: loadingMyBlogs } = useMyBlogs(page);
-  const { data: recommendedData, isLoading: loadingRecommended } = useRecommendedFeed();
+  // "For You" — infinite scroll
+  const {
+    data: infiniteData,
+    isLoading: loadingInfinite,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useInfiniteBlogs(10);
+
+  // Other tabs
+  const { data: myBlogsData, isLoading: loadingMyBlogs } = useMyBlogs(1);
+  const { data: recommendedData } = useRecommendedFeed();
+
+  // Sentinel observer — fires fetchNextPage when the sentinel div enters view
+  const handleObserver = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage && filter === 'all') {
+        fetchNextPage();
+      }
+    },
+    [fetchNextPage, hasNextPage, isFetchingNextPage, filter]
+  );
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(handleObserver, { threshold: 0.1 });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [handleObserver]);
 
   // Follow/unfollow mutations
   const followMutation = useFollowUser();
@@ -96,23 +121,25 @@ const Dashboard = () => {
       return myBlogsData?.data?.blogs || [];
     }
     if (filter === 'following') {
-      // Filter blogs by followed users (client-side until a server feed API is added)
-      return allBlogsData?.data?.blogs?.filter(blog => 
+      const allPages = infiniteData?.pages ?? [];
+      const allBlogs = allPages.flatMap((p: any) => p?.data?.blogs ?? []);
+      return allBlogs.filter(blog =>
         blog.author?.id && followingUsers.has(blog.author.id)
-      ) || [];
+      );
     }
-    // 'all' / "For You" — use recommendation service, fall back to all blogs
+    // 'all' / "For You" — accumulated infinite pages
+    const allPages = infiniteData?.pages ?? [];
+    const allBlogs = allPages.flatMap((p: any) => p?.data?.blogs ?? []);
+    // if recommendation service returned results, surface them first
     const recommended = recommendedData?.data;
-    if (recommended && Array.isArray(recommended) && recommended.length > 0) {
+    if (recommended && Array.isArray(recommended) && recommended.length > 0 && allBlogs.length === 0) {
       return recommended as any[];
     }
-    return allBlogsData?.data?.blogs || [];
+    return allBlogs;
   };
 
   const blogs = getBlogs();
-  const isLoading = filter === 'mine' ? loadingMyBlogs
-    : filter === 'all' ? (loadingRecommended && loadingAllBlogs)
-    : loadingAllBlogs;
+  const isLoading = filter === 'mine' ? loadingMyBlogs : loadingInfinite;
 
   const handleFollow = async (userId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -132,7 +159,6 @@ const Dashboard = () => {
   const handleTabChange = (value: string) => {
     const newFilter = value as 'all' | 'following' | 'mine';
     setFilter(newFilter);
-    setPage(1); // Reset page when changing tabs
     router.push(`${ROUTES.DASHBOARD}?tab=${value}`, { scroll: false });
   };
 
@@ -184,16 +210,15 @@ const Dashboard = () => {
           />
         ))}
 
-        {/* Load More */}
-        {(filter === 'all' || filter === 'mine') && blogs.length > 0 && (
-          <div className="text-center py-8">
-            <Button
-              variant="outline"
-              onClick={() => setPage(page + 1)}
-              disabled={loadingAllBlogs}
-            >
-              {loadingAllBlogs ? 'Loading...' : 'Load More'}
-            </Button>
+        {/* Infinite scroll sentinel — only on "For You" tab */}
+        {filter === 'all' && (
+          <div ref={sentinelRef} className="py-6 flex justify-center">
+            {isFetchingNextPage && (
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            )}
+            {!hasNextPage && blogs.length > 0 && (
+              <p className="text-sm text-muted-foreground">You&apos;ve seen all posts ✓</p>
+            )}
           </div>
         )}
       </>
@@ -366,28 +391,40 @@ const Dashboard = () => {
                   {suggestedUsers.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">Loading writers...</p>
                   ) : (
-                    suggestedUsers.map((suggestedUser) => (
-                      <div key={suggestedUser.id} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={suggestedUser.profile_picture_url} />
-                            <AvatarFallback>{suggestedUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium text-sm">{suggestedUser.full_name || suggestedUser.username}</div>
-                            <div className="text-xs text-muted-foreground">@{suggestedUser.username}</div>
+                    suggestedUsers
+                      // Filter out people you already follow — reactive to followingUsers state
+                      .filter((u: any) => !followingUsers.has(u.id))
+                      .slice(0, 3)
+                      .map((suggestedUser) => (
+                        <div key={suggestedUser.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={suggestedUser.profile_picture_url} />
+                              <AvatarFallback>{suggestedUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium text-sm">{suggestedUser.full_name || suggestedUser.username}</div>
+                              <div className="text-xs text-muted-foreground">
+                                @{suggestedUser.username}
+                                {suggestedUser.followers_count > 0 && (
+                                  <span className="ml-1 text-muted-foreground/60">· {suggestedUser.followers_count} followers</span>
+                                )}
+                              </div>
+                            </div>
                           </div>
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={(e) => handleFollow(suggestedUser.id, e)}
+                            disabled={followMutation.isPending || unfollowMutation.isPending}
+                          >
+                            Follow
+                          </Button>
                         </div>
-                        <Button
-                          size="sm"
-                          variant={followingUsers.has(suggestedUser.id) ? "outline" : "default"}
-                          onClick={(e) => handleFollow(suggestedUser.id, e)}
-                          disabled={followMutation.isPending || unfollowMutation.isPending}
-                        >
-                          {followingUsers.has(suggestedUser.id) ? 'Following' : 'Follow'}
-                        </Button>
-                      </div>
-                    ))
+                      ))
+                  )}
+                  {suggestedUsers.filter((u: any) => !followingUsers.has(u.id)).length === 0 && suggestedUsers.length > 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-2">You&apos;re following everyone here!</p>
                   )}
                 </CardContent>
               </Card>
@@ -396,6 +433,14 @@ const Dashboard = () => {
         </Tabs>
       </div>
     </div>
+  );
+}
+
+function Dashboard() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" /></div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }
 

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { blogApi } from '@/lib/api';
 import { QUERY_KEYS } from '@/utils/constants';
 
@@ -7,6 +7,20 @@ export function useBlogs(page = 1, limit = 10) {
   return useQuery({
     queryKey: [QUERY_KEYS.BLOGS, page, limit],
     queryFn: () => blogApi.getBlogs(page, limit),
+  });
+}
+
+// Infinite scroll — accumulates pages of blogs as user scrolls
+export function useInfiniteBlogs(limit = 10) {
+  return useInfiniteQuery({
+    queryKey: [QUERY_KEYS.BLOGS, 'infinite', limit],
+    queryFn: ({ pageParam }) => blogApi.getBlogs(pageParam as number, limit),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const blogs = (lastPage?.data as any)?.blogs ?? [];
+      if (blogs.length < limit) return undefined; // no more pages
+      return allPages.length + 1;
+    },
   });
 }
 
