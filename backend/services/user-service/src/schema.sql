@@ -2,8 +2,6 @@
 CREATE TABLE IF NOT EXISTS user_profiles (
     user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     bio TEXT,
-    avatar_url VARCHAR(500),
-    cover_image_url VARCHAR(500),
     location VARCHAR(100),
     website VARCHAR(200),
     twitter_handle VARCHAR(50),

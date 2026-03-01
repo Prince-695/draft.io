@@ -3,8 +3,6 @@ import pool from '../config/database';
 export interface UserProfile {
   user_id: string;
   bio?: string;
-  avatar_url?: string;
-  cover_image_url?: string;
   location?: string;
   website?: string;
   twitter_handle?: string;
@@ -32,8 +30,6 @@ export interface CreateProfileData {
 export interface UpdateProfileData {
   full_name?: string;
   bio?: string;
-  avatar_url?: string;
-  cover_image_url?: string;
   location?: string;
   website?: string;
   twitter_handle?: string;
@@ -87,14 +83,6 @@ export const updateProfile = async (
   if (data.bio !== undefined) {
     fields.push(`bio = $${paramCount++}`);
     values.push(data.bio);
-  }
-  if (data.avatar_url !== undefined) {
-    fields.push(`avatar_url = $${paramCount++}`);
-    values.push(data.avatar_url);
-  }
-  if (data.cover_image_url !== undefined) {
-    fields.push(`cover_image_url = $${paramCount++}`);
-    values.push(data.cover_image_url);
   }
   if (data.location !== undefined) {
     fields.push(`location = $${paramCount++}`);
@@ -158,7 +146,7 @@ export const searchUsers = async (searchTerm: string, limit = 10): Promise<any[]
   const query = `
     SELECT 
       u.id, u.username, u.full_name, u.email,
-      up.bio, up.avatar_url, up.followers_count
+      up.bio, up.followers_count
     FROM users u
     LEFT JOIN user_profiles up ON u.id = up.user_id
     WHERE 

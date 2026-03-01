@@ -1,7 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import * as ProfileModel from '../models/profile.model';
-import { uploadToCloudinary, deleteFromCloudinary } from '../utils/upload.util';
 import { validationResult } from 'express-validator';
 
 // Build a flat, normalized profile object from a joined users+user_profiles row
@@ -11,8 +10,6 @@ const buildProfileResponse = (row: any) => ({
   email: row.email,
   full_name: row.full_name,
   bio: row.bio ?? null,
-  profile_picture_url: row.avatar_url ?? null,
-  cover_image_url: row.cover_image_url ?? null,
   location: row.location ?? null,
   website: row.website ?? null,
   twitter_handle: row.twitter_handle ?? null,
@@ -142,64 +139,6 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       success: true,
       message: 'Profile updated successfully',
       data: { profile },
-    });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-};
-
-export const uploadAvatar = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    if (!req.file) {
-      res.status(400).json({ success: false, error: 'No file uploaded' });
-      return;
-    }
-
-    const userId = req.user?.user_id!;
-    const profile = await ProfileModel.findProfileByUserId(userId);
-
-    // Delete old avatar if exists
-    if (profile?.avatar_url) {
-      await deleteFromCloudinary(profile.avatar_url);
-    }
-
-    // Upload new avatar
-    const avatarUrl = await uploadToCloudinary(req.file, 'avatars');
-    const updatedProfile = await ProfileModel.updateProfile(userId, { avatar_url: avatarUrl });
-
-    res.json({
-      success: true,
-      message: 'Avatar uploaded successfully',
-      data: { avatar_url: avatarUrl, profile: updatedProfile },
-    });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-};
-
-export const uploadCoverImage = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    if (!req.file) {
-      res.status(400).json({ success: false, error: 'No file uploaded' });
-      return;
-    }
-
-    const userId = req.user?.user_id!;
-    const profile = await ProfileModel.findProfileByUserId(userId);
-
-    // Delete old cover if exists
-    if (profile?.cover_image_url) {
-      await deleteFromCloudinary(profile.cover_image_url);
-    }
-
-    // Upload new cover
-    const coverUrl = await uploadToCloudinary(req.file, 'covers');
-    const updatedProfile = await ProfileModel.updateProfile(userId, { cover_image_url: coverUrl });
-
-    res.json({
-      success: true,
-      message: 'Cover image uploaded successfully',
-      data: { cover_image_url: coverUrl, profile: updatedProfile },
     });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
