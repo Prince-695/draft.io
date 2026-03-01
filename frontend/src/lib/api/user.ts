@@ -42,8 +42,7 @@ export const userApi = {
     });
     const raw = response.data;
     // Backend returns { success, data: { users: [], count } } — normalize to array
-    // Also map avatar_url → profile_picture_url for compatibility
-    const normalize = (u: any): User => ({ ...u, profile_picture_url: u.profile_picture_url ?? u.avatar_url ?? null });
+    const normalize = (u: any): User => u;
     if (raw?.data?.users && Array.isArray(raw.data.users)) {
       return { success: raw.success, data: raw.data.users.map(normalize) };
     }

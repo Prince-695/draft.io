@@ -37,7 +37,7 @@ export function BlogPostCard({
 
   const authorName = blog.author?.full_name || blog.author?.username || blog.full_name || blog.username;
   const authorUsername = blog.author?.username || blog.username;
-  const authorAvatar = blog.author?.profile_picture_url ?? blog.author?.avatar_url ?? blog.avatar_url;
+  const authorAvatar = blog.author?.profile_picture_url ?? null;
   const authorId = blog.author?.id ?? blog.author_id;
   const isOwnPost = !!(currentUserId && authorId && currentUserId === authorId);
 
