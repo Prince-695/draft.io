@@ -170,6 +170,7 @@ app.use('/api/notifications', createProxyMiddleware({
 app.use('/api/chat', createProxyMiddleware({
   target: process.env.CHAT_SERVICE_URL || 'http://localhost:5007',
   changeOrigin: true,
+  ws: true,
   pathRewrite: {
     '^/api/chat': ''
   },

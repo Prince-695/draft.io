@@ -205,6 +205,8 @@ services:
       dockerfile: Dockerfile
     container_name: draftio-notification
     restart: unless-stopped
+    ports:
+      - "5006:5006"
     environment:
       PORT: 5006
       NODE_ENV: production
@@ -232,6 +234,8 @@ services:
       dockerfile: Dockerfile
     container_name: draftio-chat
     restart: unless-stopped
+    ports:
+      - "5007:5007"
     environment:
       PORT: 5007
       NODE_ENV: production
