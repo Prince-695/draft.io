@@ -24,20 +24,20 @@ A set of **9 independent microservices** written in TypeScript, running on Expre
 
 ```
                     ┌──────────────────────────────────────┐
-                    │         API GATEWAY  :5000            │
-                    │  Helmet · CORS · Rate-Limit · Morgan  │
-                    │  http-proxy-middleware                │
+                    │         API GATEWAY  :5000           │
+                    │  Helmet · CORS · Rate-Limit · Morgan │
+                    │  http-proxy-middleware               │
                     └──┬───────────────────────────────────┘
                        │  draftio-network (Docker bridge)
-          ┌────────────┼──────────────────────────────────────────────────┐
-          │            │                                                  │
-          ▼            ▼                 ▼              ▼                ▼
-    auth :5001   user :5002       blog :5003    engagement :5004   ai :5005
-    pg, redis       pg              pg,mongo,redis      pg          redis, openai
-          
-          ▼                  ▼                   ▼
-  notification :5006    chat :5007     recommendation :5008
-    pg, redis, socket    mongo, socket     pg, redis, openai
+          ┌────┬───────┼─────────────────┬────┬─────────┬─────────┬───────┐
+          │    │       │                 │    │         │         │       │
+          ▼    │       ▼                 ▼    │         ▼         │       ▼
+    auth :5001 │ user :5002       blog :5003  │ engagement :5004  │   ai :5005
+    pg, redis  │    pg          pg,mongo,redis│        pg         │ redis, openai
+               │                              │                   │
+               ▼                              ▼                   ▼
+        notification :5006              chat :5007     recommendation :5008
+        pg, redis, socket              mongo, socket    pg, redis, openai
 ```
 
 All services sit on a shared Docker bridge network (`draftio-network`). Only the API Gateway and the two WebSocket services (5006, 5007) expose ports to the host. The rest are internal only.

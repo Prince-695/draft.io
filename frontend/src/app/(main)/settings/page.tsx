@@ -21,11 +21,17 @@ import { authApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/utils/constants';
 import { Shield, Palette, LogOut, Trash2, CheckCircle } from 'lucide-react';
+import { toast } from '@/utils/toast';
 
 const passwordSchema = z
   .object({
     currentPassword: z.string().min(1, 'Current password is required'),
-    newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+    newPassword: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
+      .regex(/[a-z]/, 'Must contain at least one lowercase letter')
+      .regex(/[0-9]/, 'Must contain at least one number'),
     confirmPassword: z.string(),
   })
   .refine((d) => d.newPassword === d.confirmPassword, {
@@ -59,14 +65,17 @@ export default function SettingsPage() {
     setPasswordError(null);
     setPasswordSuccess(false);
     try {
-      await apiClient.post(`${API_ENDPOINTS.AUTH.RESET_PASSWORD}`, {
+      await apiClient.post(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
       });
       setPasswordSuccess(true);
       reset();
+      toast.success('Password updated successfully!');
     } catch (err) {
-      setPasswordError(getErrorMessage(err));
+      const msg = getErrorMessage(err);
+      setPasswordError(msg);
+      toast.error(msg);
     }
   };
 

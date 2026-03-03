@@ -35,16 +35,16 @@ Draft.IO is a modern, full-stack blogging platform that combines rich content cr
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          CLIENT  (Browser)                               │
+│                          CLIENT  (Browser)                              │
 │                    Next.js 16  ·  React 19  ·  Port 3000                │
 └──────────────────────────────┬──────────────────────────────────────────┘
                                │  HTTP / REST  (API calls)
                                │  WebSocket    (chat + notifications)
                                ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         API GATEWAY  :5000                               │
-│   Helmet · CORS · Rate-Limit · Morgan · http-proxy-middleware            │
-│                                                                          │
+│                         API GATEWAY  :5000                              │
+│   Helmet · CORS · Rate-Limit · Morgan · http-proxy-middleware           │
+│                                                                         │
 │  /api/auth   →  auth-service          :5001                             │
 │  /api/users  →  user-service          :5002                             │
 │  /api/blogs  →  blog-service          :5003                             │
@@ -53,7 +53,7 @@ Draft.IO is a modern, full-stack blogging platform that combines rich content cr
 │  /api/notifications → notification-service :5006 (ws)                   │
 │  /api/chat   →  chat-service          :5007 (ws)                        │
 │  /api/recommendations → recommendation-service :5008                    │
-└──────┬───────────────────────────────────────────────────────────────────┘
+└──────┬──────────────────────────────────────────────────────────────────┘
        │  Internal Docker network  (draftio-network)
        │
        ├──► auth-service        :5001   ──► PostgreSQL  (users, tokens)

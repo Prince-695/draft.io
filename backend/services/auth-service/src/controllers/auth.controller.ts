@@ -282,6 +282,40 @@ export const verifyEmail = async (req: Request, res: Response) => {
 };
 
 /**
+ * CHANGE PASSWORD - Update password for a logged-in user
+ * POST /auth/change-password
+ * Headers: Authorization: Bearer <access_token>
+ * Body: { currentPassword, newPassword }
+ */
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    const email = (req as any).user?.email;
+    const { currentPassword, newPassword } = req.body;
+
+    // 1. Load the full user row (includes password_hash)
+    const user = await UserModel.findUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    // 2. Verify current password is correct
+    const isValid = await comparePassword(currentPassword, user.password_hash);
+    if (!isValid) {
+      return res.status(401).json({ success: false, error: 'Current password is incorrect' });
+    }
+
+    // 3. Hash new password and persist
+    const newHash = await hashPassword(newPassword);
+    await UserModel.updatePassword(user.id, newHash);
+
+    return res.status(200).json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+};
+
+/**
  * GET ME - Get current logged-in user's info
  * GET /auth/me
  * Headers: Authorization: Bearer <access_token>

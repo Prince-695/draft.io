@@ -7,6 +7,7 @@ import {
   validateRegister,
   validateLogin,
   validateRefreshToken,
+  validateChangePassword,
 } from '../middleware/validation.middleware';
 
 const router = express.Router();
@@ -168,5 +169,38 @@ router.get('/me', authMiddleware, authController.getMe);
  *         description: Unauthorized
  */
 router.post('/logout', authMiddleware, authController.logout);
+
+/**
+ * @swagger
+ * /auth/change-password:
+ *   post:
+ *     summary: Change password for the currently authenticated user
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 8
+ *     responses:
+ *       200:
+ *         description: Password updated successfully
+ *       401:
+ *         description: Current password is incorrect
+ *       400:
+ *         description: Validation error
+ */
+router.post('/change-password', authMiddleware, validateChangePassword, authController.changePassword);
 
 export default router;

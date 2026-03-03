@@ -156,7 +156,22 @@ export function debounce<T extends (...args: any[]) => any>(
 export function getErrorMessage(error: unknown): string {
   // Extract backend error message from Axios errors
   if (error && typeof error === 'object') {
-    const axiosError = error as { response?: { data?: { error?: string; message?: string } }; message?: string };
+    const axiosError = error as {
+      response?: {
+        data?: {
+          error?: string;
+          message?: string;
+          // express-validator returns an array of field errors
+          errors?: Array<{ msg?: string; message?: string }>;
+        };
+      };
+      message?: string;
+    };
+    // express-validator array — join all messages
+    const fieldErrors = axiosError.response?.data?.errors;
+    if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+      return fieldErrors.map((e) => e.msg ?? e.message ?? '').filter(Boolean).join(' · ');
+    }
     if (axiosError.response?.data?.error) return axiosError.response.data.error;
     if (axiosError.response?.data?.message) return axiosError.response.data.message;
     if (axiosError.message) return axiosError.message;
