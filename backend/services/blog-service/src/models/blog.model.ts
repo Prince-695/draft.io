@@ -34,7 +34,8 @@ export const createBlog = async (
   slug: string,
   content: string,
   excerpt?: string,
-  coverImageUrl?: string
+  coverImageUrl?: string,
+  status: 'draft' | 'published' = 'draft'
 ): Promise<Blog> => {
   const client = await pool.connect();
   
@@ -48,9 +49,9 @@ export const createBlog = async (
     // Create blog metadata in PostgreSQL
     const blogResult = await client.query(
       `INSERT INTO blogs (author_id, title, slug, excerpt, cover_image_url, reading_time, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'draft')
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [authorId, title, slug, excerpt, coverImageUrl, readingTime]
+      [authorId, title, slug, excerpt, coverImageUrl, readingTime, status]
     );
     
     const blog = blogResult.rows[0];
@@ -127,6 +128,7 @@ export const updateBlog = async (
     excerpt: string;
     cover_image_url: string;
     content: string;
+    status: 'draft' | 'published';
   }>
 ): Promise<Blog | null> => {
   const client = await pool.connect();
@@ -154,6 +156,10 @@ export const updateBlog = async (
     if (updates.cover_image_url !== undefined) {
       fields.push(`cover_image_url = $${paramCount++}`);
       values.push(updates.cover_image_url);
+    }
+    if (updates.status) {
+      fields.push(`status = $${paramCount++}`);
+      values.push(updates.status);
     }
     
     // Recalculate reading time if content changed

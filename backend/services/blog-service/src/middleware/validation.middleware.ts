@@ -17,7 +17,7 @@ export const validateCreateBlog = [
     .isLength({ max: 500 }).withMessage('Excerpt must be max 500 characters'),
   
   body('cover_image_url')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isURL().withMessage('Invalid cover image URL'),
   
@@ -41,7 +41,7 @@ export const validateUpdateBlog = [
     .optional()
     .trim()
     .notEmpty().withMessage('Content cannot be empty')
-    .isLength({ min: 10 }).withMessage('Content must be at least 10 characters'),
+    .isLength({ min: 1 }).withMessage('Content cannot be empty'),
   
   body('excerpt')
     .optional()
@@ -49,7 +49,7 @@ export const validateUpdateBlog = [
     .isLength({ max: 500 }).withMessage('Excerpt must be max 500 characters'),
   
   body('cover_image_url')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isURL().withMessage('Invalid cover image URL'),
   

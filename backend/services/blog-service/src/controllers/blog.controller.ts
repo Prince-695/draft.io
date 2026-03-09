@@ -17,7 +17,7 @@ export const createBlog = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    const { title, content, excerpt, cover_image_url, tags, categories } = req.body;
+    const { title, content, excerpt, cover_image_url, tags, categories, status } = req.body;
     const authorId = req.user!.user_id;
 
     // Generate unique slug
@@ -34,7 +34,8 @@ export const createBlog = async (req: AuthRequest, res: Response): Promise<void>
       slug,
       content,
       excerpt,
-      cover_image_url
+      cover_image_url,
+      status === 'published' ? 'published' : 'draft'
     );
 
     // Add tags if provided
@@ -122,7 +123,7 @@ export const updateBlog = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     const { blogId } = req.params;
-    const { title, content, excerpt, cover_image_url, tags, categories } = req.body;
+    const { title, content, excerpt, cover_image_url, tags, categories, status } = req.body;
     const authorId = req.user!.user_id;
 
     const updates: any = {};
@@ -138,6 +139,7 @@ export const updateBlog = async (req: AuthRequest, res: Response): Promise<void>
     if (content) updates.content = content;
     if (excerpt !== undefined) updates.excerpt = excerpt;
     if (cover_image_url !== undefined) updates.cover_image_url = cover_image_url;
+    if (status === 'published' || status === 'draft') updates.status = status;
 
     const blog = await blogModel.updateBlog(blogId, authorId, updates);
 
